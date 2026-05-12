@@ -1,0 +1,354 @@
+import React, { useState, useRef } from "react";
+import { useSim } from "../context/SimContext";
+import { useTheme } from "../context/ThemeContext";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { Button } from "./ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import { Input } from "./ui/input";
+import { Badge } from "./ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
+import { ScrollArea } from "./ui/scroll-area";
+import { Package, Plus, Search, Upload, FileText, ChevronDown } from "lucide-react";
+import { toast } from "sonner";
+
+export function Registration({ showBatchImport = true }: { showBatchImport?: boolean }) {
+  const { state, registerBaggage, batchImportBaggage, airportsList, airlines } = useSim();
+  const { isDark } = useTheme();
+  const [origin, setOrigin] = useState("");
+  const [destination, setDestination] = useState("");
+  const [quantity, setQuantity] = useState("1");
+  const [airline, setAirline] = useState("");
+  const [airlineSearch, setAirlineSearch] = useState("");
+  const [airlineOpen, setAirlineOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const fileRef = useRef<HTMLInputElement>(null);
+  const airlineRef = useRef<HTMLDivElement>(null);
+
+  // Close airline dropdown on outside click
+  React.useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (airlineRef.current && !airlineRef.current.contains(e.target as Node)) {
+        setAirlineOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const filteredAirlines = airlines.filter(a =>
+    a.name.toLowerCase().includes(airlineSearch.toLowerCase()) ||
+    a.code.toLowerCase().includes(airlineSearch.toLowerCase())
+  );
+
+  // Theme classes
+  const cardBg = isDark ? "bg-[#1e293b]/50 border-[#334155]" : "bg-white border-[#cbd5e1]";
+  const titleColor = isDark ? "text-white" : "text-[#0f172a]";
+  const inputBg = isDark ? "bg-[#0f172a] border-[#334155] text-white" : "bg-[#f8fafc] border-[#cbd5e1] text-[#0f172a]";
+  const selectContentBg = isDark ? "bg-[#1e293b] border-[#334155]" : "bg-white border-[#cbd5e1]";
+  const selectItemText = isDark ? "text-white" : "text-[#0f172a]";
+  const subtleText = isDark ? "text-white/70" : "text-[#475569]";
+  const subtlerText = isDark ? "text-white/60" : "text-[#64748b]";
+  const cellText = isDark ? "text-white" : "text-[#0f172a]";
+  const cellTextSub = isDark ? "text-white/80" : "text-[#475569]";
+  const rowBorder = isDark ? "border-[#1e293b]" : "border-[#e2e8f0]";
+  const rowHover = isDark ? "hover:bg-[#0f172a]/50" : "hover:bg-[#f1f5f9]";
+  const cyanText = isDark ? "text-cyan-400" : "text-cyan-600";
+  const searchIconColor = isDark ? "text-white/40" : "text-[#94a3b8]";
+  const headerBorder = isDark ? "border-[#334155]" : "border-[#e2e8f0]";
+  const dropdownBg = isDark ? "bg-[#1e293b]" : "bg-white";
+  const dropdownBorder = isDark ? "border-[#334155]" : "border-[#cbd5e1]";
+  const dropdownHover = isDark ? "hover:bg-[#334155]" : "hover:bg-[#f1f5f9]";
+
+  const handleRegister = () => {
+    if (!origin || !destination || !airline || origin === destination) {
+      toast.error("Complete todos los campos. Origen y destino deben ser diferentes.");
+      return;
+    }
+    const qty = parseInt(quantity);
+    if (isNaN(qty) || qty < 1) {
+      toast.error("Cantidad inválida.");
+      return;
+    }
+    registerBaggage(origin, destination, qty, airline);
+    toast.success(`${qty} maletas registradas: ${origin} → ${destination}`);
+    setQuantity("1");
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const text = ev.target?.result as string;
+        let items: { origin: string; destination: string; quantity: number; airline: string }[] = [];
+
+        if (file.name.endsWith(".json")) {
+          const data = JSON.parse(text);
+          if (Array.isArray(data)) {
+            items = data.map((d: any) => ({
+              origin: String(d.origin || d.origen || "").toUpperCase(),
+              destination: String(d.destination || d.destino || "").toUpperCase(),
+              quantity: Number(d.quantity || d.cantidad || 1),
+              airline: String(d.airline || d.aerolinea || "TransGlobal"),
+            }));
+          }
+        } else {
+          // CSV: origin,destination,quantity,airline
+          const lines = text.split("\n").filter(l => l.trim());
+          const hasHeader = lines[0]?.toLowerCase().includes("origin") || lines[0]?.toLowerCase().includes("origen");
+          const startIdx = hasHeader ? 1 : 0;
+          for (let i = startIdx; i < lines.length; i++) {
+            const parts = lines[i].split(",").map(s => s.trim());
+            if (parts.length >= 3) {
+              items.push({
+                origin: parts[0].toUpperCase(),
+                destination: parts[1].toUpperCase(),
+                quantity: Number(parts[2]) || 1,
+                airline: parts[3] || "TransGlobal",
+              });
+            }
+          }
+        }
+
+        const validItems = items.filter(it =>
+          it.origin && it.destination && it.origin !== it.destination && it.quantity > 0
+        );
+
+        if (validItems.length === 0) {
+          toast.error("No se encontraron registros válidos en el archivo.");
+          return;
+        }
+
+        const count = batchImportBaggage(validItems);
+        toast.success(`${count} lotes de maletas importados exitosamente desde ${file.name}`);
+      } catch (err) {
+        toast.error("Error al procesar el archivo. Verifique el formato.");
+      }
+    };
+    reader.readAsText(file);
+    if (fileRef.current) fileRef.current.value = "";
+  };
+
+  const filtered = state.baggageGroups.filter(bg => {
+    if (statusFilter !== "all" && bg.status !== statusFilter) return false;
+    if (!search) return true;
+    const s = search.toLowerCase();
+    return bg.id.toLowerCase().includes(s) ||
+      bg.origin.toLowerCase().includes(s) ||
+      bg.destination.toLowerCase().includes(s) ||
+      bg.airline.toLowerCase().includes(s);
+  });
+
+  const statusColors: Record<string, string> = {
+    waiting: isDark ? "bg-amber-500/20 text-amber-400" : "bg-amber-100 text-amber-700 border border-amber-300",
+    in_transit: isDark ? "bg-blue-500/20 text-blue-400" : "bg-blue-100 text-blue-700 border border-blue-300",
+    delivered: isDark ? "bg-green-500/20 text-green-400" : "bg-green-100 text-green-700 border border-green-300",
+    delayed: isDark ? "bg-orange-500/20 text-orange-400" : "bg-orange-100 text-orange-700 border border-orange-300",
+    failed: isDark ? "bg-red-500/20 text-red-400" : "bg-red-100 text-red-700 border border-red-300",
+  };
+
+  const statusLabels: Record<string, string> = {
+    waiting: "En espera",
+    in_transit: "En tránsito",
+    delivered: "Entregado",
+    delayed: "Retrasado",
+    failed: "Fallido",
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Formulario de registro */}
+      <Card className={cardBg}>
+        <CardHeader className="pb-3">
+          <CardTitle className={`${titleColor} text-[14px] flex items-center gap-2`}>
+            <Plus className="w-4 h-4" /> Registrar Envío de Maletas
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+            {/* Airline searchable combobox */}
+            <div ref={airlineRef} className="relative">
+              {airlineOpen ? (
+                <div className={`flex items-center h-9 w-full rounded-md border px-3 text-[13px] ${inputBg}`}>
+                  <input
+                    className="flex-1 bg-transparent outline-none text-[13px] min-w-0"
+                    placeholder="Buscar aerolínea..."
+                    value={airlineSearch}
+                    onChange={e => setAirlineSearch(e.target.value)}
+                    autoFocus
+                  />
+                  <ChevronDown className={`w-3.5 h-3.5 shrink-0 ${isDark ? "text-white/50" : "text-[#9ca3af]"}`} />
+                </div>
+              ) : (
+                <div
+                  className={`flex items-center h-9 w-full rounded-md border px-3 text-[13px] cursor-pointer ${inputBg}`}
+                  onClick={() => { setAirlineOpen(true); setAirlineSearch(""); }}
+                >
+                  <span className={`flex-1 truncate ${!airline ? "text-muted-foreground" : ""}`}>
+                    {airline || "Aerolínea"}
+                  </span>
+                  <ChevronDown className={`w-3.5 h-3.5 shrink-0 ${isDark ? "text-white/50" : "text-[#9ca3af]"}`} />
+                </div>
+              )}
+              {airlineOpen && (
+                <div className={`absolute z-50 top-full mt-1 w-full rounded-md border shadow-lg ${dropdownBg} ${dropdownBorder}`}>
+                  <div className="max-h-48 overflow-y-auto">
+                    {filteredAirlines.length === 0 ? (
+                      <div className={`px-3 py-2 text-[12px] ${subtleText}`}>Sin resultados</div>
+                    ) : (
+                      filteredAirlines.map(a => (
+                        <div
+                          key={a.id}
+                          className={`px-3 py-1.5 text-[12px] cursor-pointer ${selectItemText} ${dropdownHover} ${airline === a.name ? (isDark ? "bg-blue-600/20" : "bg-blue-100") : ""}`}
+                          onClick={() => { setAirline(a.name); setAirlineOpen(false); setAirlineSearch(""); }}
+                        >
+                          {a.name} <span className={subtlerText}>({a.code})</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+            <Select value={origin} onValueChange={setOrigin}>
+              <SelectTrigger className={inputBg}>
+                <SelectValue placeholder="Origen" />
+              </SelectTrigger>
+              <SelectContent className={selectContentBg}>
+                {airportsList.map(a => (
+                  <SelectItem key={a.code} value={a.code} className={selectItemText}>{a.code} — {a.city}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={destination} onValueChange={setDestination}>
+              <SelectTrigger className={inputBg}>
+                <SelectValue placeholder="Destino" />
+              </SelectTrigger>
+              <SelectContent className={selectContentBg}>
+                {airportsList.map(a => (
+                  <SelectItem key={a.code} value={a.code} className={selectItemText}>{a.code} — {a.city}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Input
+              type="number"
+              min={1}
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value)}
+              placeholder="Cantidad"
+              className={inputBg}
+            />
+            <Button onClick={handleRegister} className="bg-blue-600 hover:bg-blue-700">
+              <Package className="w-4 h-4 mr-1" /> Registrar
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Importar archivo */}
+      {showBatchImport && (
+        <Card className={cardBg}>
+          <CardHeader className="pb-3">
+            <CardTitle className={`${titleColor} text-[14px] flex items-center gap-2`}>
+              <Upload className="w-4 h-4" /> Importar Maletas en Lote
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-3">
+              <input
+                ref={fileRef}
+                type="file"
+                accept=".csv,.json"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+              <Button onClick={() => fileRef.current?.click()} className="bg-cyan-400 text-black hover:bg-cyan-500">
+                <FileText className="w-4 h-4 mr-2" /> Seleccionar Archivo (CSV/JSON)
+              </Button>
+              <div className={`text-[11px] ${subtlerText}`}>
+                <p>Formato CSV: <code className={cyanText}>origen,destino,cantidad,aerolinea</code></p>
+                <p>Formato JSON: <code className={cyanText}>[{`{"origin","destination","quantity","airline"}`}]</code></p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Lista de equipajes */}
+      <Card className={cardBg}>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className={`${titleColor} text-[14px]`}>
+              Equipajes Registrados ({filtered.length})
+            </CardTitle>
+            <div className="flex items-center gap-2">
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className={`h-8 w-36 text-[12px] ${inputBg}`}>
+                  <SelectValue placeholder="Estado" />
+                </SelectTrigger>
+                <SelectContent className={selectContentBg}>
+                  <SelectItem value="all" className={selectItemText}>Todos</SelectItem>
+                  <SelectItem value="waiting" className={selectItemText}>En espera</SelectItem>
+                  <SelectItem value="in_transit" className={selectItemText}>En tránsito</SelectItem>
+                  <SelectItem value="delivered" className={selectItemText}>Entregado</SelectItem>
+                  <SelectItem value="delayed" className={selectItemText}>Retrasado</SelectItem>
+                  <SelectItem value="failed" className={selectItemText}>Fallido</SelectItem>
+                </SelectContent>
+              </Select>
+              <div className="relative">
+                <Search className={`w-3 h-3 absolute left-2 top-1/2 -translate-y-1/2 ${searchIconColor}`} />
+                <Input
+                  placeholder="Buscar..."
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  className={`pl-7 h-8 w-48 text-[12px] ${inputBg}`}
+                />
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <ScrollArea className="h-[500px]">
+            <Table>
+              <TableHeader>
+                <TableRow className={headerBorder}>
+                  <TableHead className={`${subtleText} text-[11px]`}>ID</TableHead>
+                  <TableHead className={`${subtleText} text-[11px]`}>Aerolínea</TableHead>
+                  <TableHead className={`${subtleText} text-[11px]`}>Origen</TableHead>
+                  <TableHead className={`${subtleText} text-[11px]`}>Destino</TableHead>
+                  <TableHead className={`${subtleText} text-[11px]`}>Cant.</TableHead>
+                  <TableHead className={`${subtleText} text-[11px]`}>Ubicación</TableHead>
+                  <TableHead className={`${subtleText} text-[11px]`}>Estado</TableHead>
+                  <TableHead className={`${subtleText} text-[11px]`}>Ruta</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.slice(-100).reverse().map(bg => (
+                  <TableRow key={bg.id} className={`${rowBorder} ${rowHover}`}>
+                    <TableCell className={`${cellText} text-[11px]`}>{bg.id}</TableCell>
+                    <TableCell className={`${cellTextSub} text-[11px]`}>{bg.airline}</TableCell>
+                    <TableCell className={`${cellTextSub} text-[11px]`}>{bg.origin}</TableCell>
+                    <TableCell className={`${cellTextSub} text-[11px]`}>{bg.destination}</TableCell>
+                    <TableCell className={`${cellText} text-[11px]`}>{bg.quantity}</TableCell>
+                    <TableCell className={`${cyanText} text-[11px]`}>{bg.currentLocation}</TableCell>
+                    <TableCell>
+                      <Badge className={`text-[10px] ${statusColors[bg.status]}`}>
+                        {statusLabels[bg.status]}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className={`${subtlerText} text-[10px]`}>
+                      {bg.route.map(l => l.to).join(" → ") || "Sin ruta"}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </ScrollArea>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
