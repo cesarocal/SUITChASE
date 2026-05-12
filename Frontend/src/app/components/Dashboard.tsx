@@ -32,7 +32,7 @@ export function Dashboard() {
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         <KpiCard isDark={isDark} title="Registradas" value={stats.totalRegistered} icon={<Package className="w-4 h-4 text-blue-400" />} color="bg-blue-500/20" />
         <KpiCard isDark={isDark} title="Entregadas" value={stats.totalDelivered} icon={<CheckCircle className="w-4 h-4 text-green-400" />} color="bg-green-500/20" />
-        <KpiCard isDark={isDark} title="En Tránsito" value={stats.totalInTransit} icon={<Plane className="w-4 h-4 text-cyan-400" />} color="bg-cyan-500/20" />
+        <KpiCard isDark={isDark} title="En Tránsito" value={stats.totalInTransit} icon={<Plane className={`w-4 h-4 ${isDark ? "text-cyan-400" : "text-blue-700"}`} />} color={isDark ? "bg-cyan-500/20" : "bg-blue-600/20"} />
         <KpiCard isDark={isDark} title="En Espera" value={stats.totalWaiting} icon={<Clock className="w-4 h-4 text-amber-400" />} color="bg-amber-500/20" />
         <KpiCard isDark={isDark} title="Fallidas" value={stats.totalFailed} icon={<AlertTriangle className="w-4 h-4 text-red-400" />} color="bg-red-500/20" />
         <KpiCard isDark={isDark} title="Tasa a Tiempo" value={`${stats.onTimeRate.toFixed(1)}%`} icon={<Warehouse className="w-4 h-4 text-purple-400" />} color="bg-purple-500/20" />

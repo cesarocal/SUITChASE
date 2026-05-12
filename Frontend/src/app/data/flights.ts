@@ -24,7 +24,7 @@ function generateFlights(): FlightSchedule[] {
         const numFlights = 1 + Math.floor(Math.random() * 2); // 1-2 flights
         for (let f = 0; f < numFlights; f++) {
           const hour = Math.floor((24 / numFlights) * f + Math.random() * 4);
-          const cap = 150 + Math.floor(Math.random() * 101); // 150-250
+          const cap = 1500 + Math.floor(Math.random() * 1001); // 1500-2500
           flights.push({
             id: `F${String(id++).padStart(4, "0")}`,
             origin: cities[i].code,
@@ -68,7 +68,7 @@ function generateFlights(): FlightSchedule[] {
     for (const a of h1) {
       for (const b of h2) {
         const hour = Math.floor(Math.random() * 24);
-        const cap = 150 + Math.floor(Math.random() * 251); // 150-400
+        const cap = 1500 + Math.floor(Math.random() * 2501); // 1500-4000
         flights.push({
           id: `F${String(id++).padStart(4, "0")}`,
           origin: a,
@@ -110,6 +110,6 @@ export function getTransitTimeHours(originCode: string, destCode: string): numbe
 export function getDeadlineHours(originCode: string, destCode: string): number {
   const a = getAirportByCode(originCode);
   const b = getAirportByCode(destCode);
-  if (!a || !b) return 48;
-  return isSameContinent(a, b) ? 24 : 48;
+  if (!a || !b) return 480;
+  return isSameContinent(a, b) ? 240 : 480;
 }

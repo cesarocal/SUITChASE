@@ -10,7 +10,7 @@ import { Search, Package, Plane, CheckCircle, AlertTriangle, Clock, ChevronRight
 
 const statusConfig: Record<string, { color: string; bg: string; lightBg: string; lightColor: string; label: string; icon: React.ReactNode }> = {
   waiting:    { color: "text-amber-500",  bg: "bg-amber-500/20",  lightBg: "bg-amber-100", lightColor: "text-amber-700", label: "En espera",   icon: <Clock className="w-3 h-3" /> },
-  in_transit: { color: "text-cyan-500",   bg: "bg-cyan-500/20",   lightBg: "bg-cyan-100",  lightColor: "text-cyan-700",  label: "En tránsito", icon: <Plane className="w-3 h-3" /> },
+  in_transit: { color: "text-blue-700",   bg: "bg-blue-600/20",   lightBg: "bg-blue-100",  lightColor: "text-blue-800",  label: "En tránsito", icon: <Plane className="w-3 h-3" /> },
   delivered:  { color: "text-green-500",  bg: "bg-green-500/20",  lightBg: "bg-green-100", lightColor: "text-green-700", label: "Entregado",   icon: <CheckCircle className="w-3 h-3" /> },
   delayed:    { color: "text-orange-500", bg: "bg-orange-500/20", lightBg: "bg-orange-100",lightColor: "text-orange-700",label: "Retrasado",   icon: <AlertTriangle className="w-3 h-3" /> },
   failed:     { color: "text-red-500",    bg: "bg-red-500/20",    lightBg: "bg-red-100",   lightColor: "text-red-700",   label: "Fallido",     icon: <AlertTriangle className="w-3 h-3" /> },
@@ -90,7 +90,7 @@ export function AirlineTracking() {
     <div className={`h-full flex flex-col relative transition-colors duration-200 ${rootBg}`}>
       {/* Título */}
       <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-center py-3 pointer-events-none">
-        <h1 className={`text-[18px] tracking-wider ${isDark ? "text-cyan-400" : "text-[#0f172a]"}`} style={{ textShadow: isDark ? "0 0 20px #00e5ff60" : "none" }}>
+        <h1 className={`text-[18px] tracking-wider ${isDark ? "text-cyan-400" : "text-blue-800 font-bold"}`} style={{ textShadow: isDark ? "0 0 20px #00e5ff60" : "none" }}>
           Tracking de Equipaje — Aerolínea
         </h1>
       </div>
@@ -106,7 +106,7 @@ export function AirlineTracking() {
           <div className={`absolute right-4 top-14 bottom-4 z-10 w-72 border rounded-xl backdrop-blur-sm overflow-hidden flex flex-col pointer-events-auto ${panelBg}`}>
             {/* Header */}
             <div className={`flex items-center gap-2 px-3 py-2 border-b ${headerBorder}`}>
-              <Package className="w-4 h-4 text-cyan-500" />
+              <Package className={`w-4 h-4 ${isDark ? "text-cyan-500" : "text-blue-700"}`} />
               <span className={`text-[13px] ${titleCls}`}>Rastreo de Maletas</span>
             </div>
 
@@ -121,7 +121,7 @@ export function AirlineTracking() {
                   className={`pl-7 h-7 text-[11px] ${searchBg}`}
                 />
                 {search && (
-                  <button onClick={handleClear} className={`absolute right-2 top-1/2 -translate-y-1/2 ${dimCls} hover:text-cyan-500`}>
+                  <button onClick={handleClear} className={`absolute right-2 top-1/2 -translate-y-1/2 ${dimCls} ${isDark ? "hover:text-cyan-500" : "hover:text-blue-700"}`}>
                     <X className="w-3 h-3" />
                   </button>
                 )}
@@ -144,7 +144,7 @@ export function AirlineTracking() {
                 {/* Línea de tiempo de la ruta */}
                 <div className="space-y-0">
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-cyan-500 shrink-0" />
+                    <div className={`w-2 h-2 rounded-full shrink-0 ${isDark ? "bg-cyan-500" : "bg-blue-600"}`} />
                     <div className="flex-1">
                       <div className={`text-[10px] ${titleCls}`}>
                         {getCity(selectedBaggage.origin)} ({selectedBaggage.origin})
@@ -164,11 +164,11 @@ export function AirlineTracking() {
                       <React.Fragment key={i}>
                         <div className={`ml-[3px] w-[2px] h-3 ${trackLineBg} relative`}>
                           {(isCompleted || isCurrent) && (
-                            <div className="absolute inset-0 bg-cyan-500" style={{ height: isCurrent ? "50%" : "100%" }} />
+                            <div className={`absolute inset-0 ${isDark ? "bg-cyan-500" : "bg-blue-600"}`} style={{ height: isCurrent ? "50%" : "100%" }} />
                           )}
                         </div>
                         <div className="flex items-center gap-2">
-                          <div className={`w-2 h-2 rounded-full shrink-0 ${isCompleted ? "bg-cyan-500" : isCurrent ? "bg-cyan-500 animate-pulse" : dotInactive}`} />
+                          <div className={`w-2 h-2 rounded-full shrink-0 ${isCompleted ? (isDark ? "bg-cyan-500" : "bg-blue-600") : isCurrent ? (isDark ? "bg-cyan-500 animate-pulse" : "bg-blue-600 animate-pulse") : dotInactive}`} />
                           <div className="flex-1">
                             <div className={`text-[10px] ${titleCls}`}>
                               {getCity(leg.to)} ({leg.to})
@@ -200,7 +200,7 @@ export function AirlineTracking() {
 
                 <button
                   onClick={handleClear}
-                  className="mt-2 text-[10px] text-cyan-500 hover:text-cyan-400"
+                  className={`mt-2 text-[10px] transition-colors ${isDark ? "text-cyan-500 hover:text-cyan-400" : "text-blue-700 hover:text-blue-800"}`}
                 >
                   Cerrar detalle
                 </button>
@@ -250,7 +250,7 @@ export function AirlineTracking() {
         {/* Botón toggle panel */}
         <button
           onClick={() => setShowPanel(!showPanel)}
-          className={`absolute right-4 top-3 z-20 px-2 py-1 border rounded-lg text-[10px] transition-colors ${isDark ? "bg-[#0a0f1ecc] border-[#1a2744] text-white/70 hover:text-cyan-400" : "bg-white/80 border-[#cbd5e1] text-[#475569] hover:text-cyan-500"}`}
+          className={`absolute right-4 top-3 z-20 px-2 py-1 border rounded-lg text-[10px] transition-colors ${isDark ? "bg-[#0a0f1ecc] border-[#1a2744] text-white/70 hover:text-cyan-400" : "bg-white/80 border-[#cbd5e1] text-[#475569] hover:text-blue-700"}`}
         >
           {showPanel ? "Ocultar" : "Rastreo"}
         </button>

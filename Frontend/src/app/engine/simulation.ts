@@ -182,10 +182,12 @@ export function simulateStep(state: SimulationState, dt: number): { state: Simul
           type: "collapse",
           description: `PLAZO VENCIDO: ${bg.id} (${bg.origin}→${bg.destination})`,
         });
-        // Collapse for ALL scenarios when deadline is missed
-        newState.collapsed = true;
-        newState.running = false;
-        newState.collapseReason = `Colapso en día ${newState.day}: maletas ${bg.id} no pudieron ser entregadas a tiempo (${bg.origin}→${bg.destination}). Plazo excedido.`;
+        // Collapse for "collapse" scenario when deadline is missed
+        if (state.scenario === "collapse") {
+          newState.collapsed = true;
+          newState.running = false;
+          newState.collapseReason = `Colapso en día ${newState.day}: maletas ${bg.id} no pudieron ser entregadas a tiempo (${bg.origin}→${bg.destination}). Plazo excedido.`;
+        }
       }
       continue;
     }
@@ -281,16 +283,18 @@ export function simulateStep(state: SimulationState, dt: number): { state: Simul
     totalStock += newState.airports[code].currentStock;
     totalCap += newState.airports[code].capacity;
 
-    // Check warehouse overflow - collapse for ALL scenarios
+    // Check warehouse overflow - collapse only for collapse scenario
     if (newState.airports[code].currentStock > newState.airports[code].capacity) {
-      newState.collapsed = true;
-      newState.running = false;
-      newState.collapseReason = `Colapso en día ${newState.day}: almacén de ${code} excedió su capacidad (${newState.airports[code].currentStock}/${newState.airports[code].capacity} maletas).`;
-      events.push({
-        time: newTime,
-        type: "collapse",
-        description: `ALMACÉN DESBORDADO: ${code} (${newState.airports[code].currentStock}/${newState.airports[code].capacity})`,
-      });
+      if (state.scenario === "collapse") {
+        newState.collapsed = true;
+        newState.running = false;
+        newState.collapseReason = `Colapso en día ${newState.day}: almacén de ${code} excedió su capacidad (${newState.airports[code].currentStock}/${newState.airports[code].capacity} maletas).`;
+        events.push({
+          time: newTime,
+          type: "collapse",
+          description: `ALMACÉN DESBORDADO: ${code} (${newState.airports[code].currentStock}/${newState.airports[code].capacity})`,
+        });
+      }
     }
   }
   newState.stats.warehouseUtilization = totalCap > 0 ? (totalStock / totalCap) * 100 : 0;

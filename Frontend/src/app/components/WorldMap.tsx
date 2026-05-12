@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
 import { AIRPORTS } from "../data/airports";
 import { useSim } from "../context/SimContext";
+import { useTheme } from "../context/ThemeContext";
 
 function latLngToXY(lat: number, lng: number, width: number, height: number) {
   const x = ((lng + 180) / 360) * width;
@@ -22,6 +23,7 @@ const CONTINENT_COLORS: Record<string, string> = {
 
 export function WorldMap() {
   const { state } = useSim();
+  const { isDark } = useTheme();
   const W = 900;
   const H = 480;
 
@@ -86,16 +88,17 @@ export function WorldMap() {
         {activeFlights.map((f, i) => {
           const px = f.from.x + (f.to.x - f.from.x) * f.progress;
           const py = f.from.y + (f.to.y - f.from.y) * f.progress;
+          const traceColor = isDark ? "#60a5fa" : "#1e3a8a";
           return (
             <g key={`active-${i}`}>
               <line
                 x1={f.from.x} y1={f.from.y}
                 x2={f.to.x} y2={f.to.y}
-                stroke="#60a5fa"
+                stroke={traceColor}
                 strokeWidth="1"
                 opacity="0.6"
               />
-              <circle cx={px} cy={py} r={Math.min(5, 2 + f.qty / 20)} fill="#60a5fa">
+              <circle cx={px} cy={py} r={Math.min(5, 2 + f.qty / 20)} fill={traceColor}>
                 <animate attributeName="opacity" values="1;0.5;1" dur="1.5s" repeatCount="indefinite" />
               </circle>
             </g>

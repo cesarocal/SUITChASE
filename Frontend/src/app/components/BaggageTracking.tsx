@@ -9,7 +9,7 @@ import { Search, Package, MapPin, Plane, CheckCircle, AlertTriangle, Clock, Chev
 
 const statusConfig: Record<string, { color: string; bg: string; label: string; icon: React.ReactNode }> = {
   waiting:    { color: "text-amber-500",  bg: "bg-amber-500/20",  label: "En espera",   icon: <Clock className="w-3 h-3" /> },
-  in_transit: { color: "text-cyan-500",   bg: "bg-cyan-500/20",   label: "En tránsito", icon: <Plane className="w-3 h-3" /> },
+  in_transit: { color: "text-blue-700",   bg: "bg-blue-600/20",   label: "En tránsito", icon: <Plane className="w-3 h-3" /> },
   delivered:  { color: "text-green-500",  bg: "bg-green-500/20",  label: "Entregado",   icon: <CheckCircle className="w-3 h-3" /> },
   delayed:    { color: "text-orange-500", bg: "bg-orange-500/20", label: "Retrasado",   icon: <AlertTriangle className="w-3 h-3" /> },
   failed:     { color: "text-red-500",    bg: "bg-red-500/20",    label: "Fallido",     icon: <AlertTriangle className="w-3 h-3" /> },
@@ -82,7 +82,7 @@ export function BaggageTracking({ selectedBaggage, onSelectBaggage }: BaggageTra
   return (
     <div className="flex flex-col h-full">
       <div className={`flex items-center gap-2 px-3 py-2 border-b ${headerBorder}`}>
-        <Package className="w-4 h-4 text-cyan-500" />
+        <Package className={`w-4 h-4 ${isDark ? "text-cyan-500" : "text-blue-700"}`} />
         <span className={`text-[13px] ${titleCls}`}>Rastreo de Maletas</span>
       </div>
 
@@ -115,7 +115,7 @@ export function BaggageTracking({ selectedBaggage, onSelectBaggage }: BaggageTra
           {/* Línea de tiempo de la ruta */}
           <div className="space-y-0">
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-cyan-500 shrink-0" />
+              <div className={`w-2 h-2 rounded-full shrink-0 ${isDark ? "bg-cyan-500" : "bg-blue-600"}`} />
               <div className="flex-1">
                 <div className={`text-[10px] ${titleCls}`}>
                   {getCity(selectedBaggage.origin)} ({selectedBaggage.origin})
@@ -135,11 +135,11 @@ export function BaggageTracking({ selectedBaggage, onSelectBaggage }: BaggageTra
                 <React.Fragment key={i}>
                   <div className={`ml-[3px] w-[2px] h-3 ${trackLineBg} relative`}>
                     {(isCompleted || isCurrent) && (
-                      <div className="absolute inset-0 bg-cyan-500" style={{ height: isCurrent ? "50%" : "100%" }} />
+                      <div className={`absolute inset-0 ${isDark ? "bg-cyan-500" : "bg-blue-600"}`} style={{ height: isCurrent ? "50%" : "100%" }} />
                     )}
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full shrink-0 ${isCompleted ? "bg-cyan-500" : isCurrent ? "bg-cyan-500 animate-pulse" : dotInactive}`} />
+                    <div className={`w-2 h-2 rounded-full shrink-0 ${isCompleted ? (isDark ? "bg-cyan-500" : "bg-blue-600") : isCurrent ? (isDark ? "bg-cyan-500 animate-pulse" : "bg-blue-600 animate-pulse") : dotInactive}`} />
                     <div className="flex-1">
                       <div className={`text-[10px] ${titleCls}`}>
                         {getCity(leg.to)} ({leg.to})
@@ -167,7 +167,7 @@ export function BaggageTracking({ selectedBaggage, onSelectBaggage }: BaggageTra
 
           <button
             onClick={() => onSelectBaggage(null)}
-            className="mt-2 text-[10px] text-cyan-500 hover:text-cyan-400"
+            className={`mt-2 text-[10px] transition-colors ${isDark ? "text-cyan-500 hover:text-cyan-400" : "text-blue-700 hover:text-blue-800"}`}
           >
             Cerrar detalle
           </button>
@@ -185,7 +185,7 @@ export function BaggageTracking({ selectedBaggage, onSelectBaggage }: BaggageTra
                 key={bg.id}
                 onClick={() => onSelectBaggage(isSelected ? null : bg)}
                 className={`w-full text-left px-2 py-1.5 rounded-md mb-0.5 flex items-center gap-2 transition-colors ${
-                  isSelected ? "bg-cyan-500/10 border border-cyan-500/30" : `${hoverRow} border border-transparent`
+                  isSelected ? (isDark ? "bg-cyan-500/10 border border-cyan-500/30" : "bg-blue-600/10 border border-blue-600/30") : `${hoverRow} border border-transparent`
                 }`}
               >
                 <div className={`shrink-0 ${s.color}`}>{s.icon}</div>

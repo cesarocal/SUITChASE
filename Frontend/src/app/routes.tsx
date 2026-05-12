@@ -1,5 +1,7 @@
 import React from "react";
-import { createBrowserRouter } from "react-router";
+import { createBrowserRouter, Outlet } from "react-router";
+import { ThemeProvider } from "./context/ThemeContext";
+import { SimProvider } from "./context/SimContext";
 import { Layout } from "./components/Layout";
 import { Dashboard } from "./components/Dashboard";
 import { Registration } from "./components/Registration";
@@ -36,37 +38,54 @@ function ErrorFallback() {
   );
 }
 
+function Root() {
+  return (
+    <ThemeProvider>
+      <SimProvider>
+        <div className="h-screen w-screen overflow-hidden">
+          <Outlet />
+        </div>
+      </SimProvider>
+    </ThemeProvider>
+  );
+}
+
 export const router = createBrowserRouter([
   {
-    path: "/login",
-    Component: LoginPage,
-  },
-  {
-    path: "/",
-    Component: Layout,
+    element: <Root />,
     ErrorBoundary: ErrorFallback,
     children: [
-      { index: true, Component: Dashboard },
-      { path: "registro", Component: Registration },
-      { path: "vuelos", Component: FlightsPanel },
-      { path: "aeropuertos", Component: AirportsPanel },
-      { path: "simulacion", Component: SimulationPage },
-      { path: "aerolineas", Component: AirlinesPanel },
-      { path: "operarios", Component: OperariosPanel },
-    ],
-  },
-  {
-    path: "/operario",
-    Component: OperatorLayout,
-    children: [
-      { index: true, Component: OperatorRegistration },
-    ],
-  },
-  {
-    path: "/aerolinea",
-    Component: AirlineLayout,
-    children: [
-      { index: true, Component: AirlineTracking },
-    ],
-  },
+      {
+        path: "/login",
+        Component: LoginPage,
+      },
+      {
+        path: "/",
+        Component: Layout,
+        children: [
+          { index: true, Component: Dashboard },
+          { path: "registro", Component: Registration },
+          { path: "vuelos", Component: FlightsPanel },
+          { path: "aeropuertos", Component: AirportsPanel },
+          { path: "simulacion", Component: SimulationPage },
+          { path: "aerolineas", Component: AirlinesPanel },
+          { path: "operarios", Component: OperariosPanel },
+        ],
+      },
+      {
+        path: "/operario",
+        Component: OperatorLayout,
+        children: [
+          { index: true, Component: OperatorRegistration },
+        ],
+      },
+      {
+        path: "/aerolinea",
+        Component: AirlineLayout,
+        children: [
+          { index: true, Component: AirlineTracking },
+        ],
+      },
+    ]
+  }
 ]);

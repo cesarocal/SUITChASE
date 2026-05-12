@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Outlet, NavLink, useLocation, useNavigate } from "react-router";
-import { useSim, SimProvider } from "../context/SimContext";
-import { useTheme, ThemeProvider } from "../context/ThemeContext";
+import { useSim } from "../context/SimContext";
+import { useTheme } from "../context/ThemeContext";
 import { Badge } from "./ui/badge";
 import {
   LayoutDashboard, Package, Plane, Warehouse, Activity,
@@ -60,17 +60,11 @@ try {
 }
 
 export function Layout() {
-  return (
-    <ThemeProvider>
-      <SimProvider>
-        <LayoutInner />
-      </SimProvider>
-    </ThemeProvider>
-  );
+  return <LayoutInner />;
 }
 
 function LayoutInner() {
-  const { state, seekTo } = useSim();
+  const { state, startFastForward } = useSim();
   const { isDark, toggleTheme } = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
@@ -112,11 +106,7 @@ function LayoutInner() {
   const handleDateSeek = () => {
     if (!pickerValue) return;
     const target = new Date(pickerValue);
-    const diffMs = target.getTime() - SIM_BASE_DATE.getTime();
-    const diffHours = diffMs / (1000 * 60 * 60);
-    const day = Math.floor(diffHours / 24) + 1;
-    const hour = diffHours % 24;
-    if (day >= 1) seekTo(Math.max(1, day), Math.max(0, hour));
+    startFastForward(target);
     setShowSimDatePicker(false);
   };
 
@@ -188,7 +178,7 @@ function LayoutInner() {
           <div className="flex items-center gap-3">
             {isDashboardPage ? (
               <>
-                <div className="w-2.5 h-2.5 rounded-full shrink-0 bg-cyan-500 animate-pulse" />
+                <div className={`w-2.5 h-2.5 rounded-full shrink-0 animate-pulse ${isDark ? "bg-cyan-500" : "bg-blue-600"}`} />
                 <span className={`text-[14px] ${isDark ? "text-white" : "text-[#0f172a]"}`}>En Vivo</span>
                 <span className={`text-[14px] ${isDark ? "text-[#cbd5e1]" : "text-[#334155]"}`}>{dateStr} • {timeStr}</span>
               </>
@@ -202,10 +192,10 @@ function LayoutInner() {
                   <button
                     onClick={() => setShowSimDatePicker(!showSimDatePicker)}
                     className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-[13px] border transition-colors ${
-                      isDark ? "bg-[#1e293b] border-[#334155] text-cyan-400 hover:border-cyan-500/40" : "bg-white border-[#cbd5e1] text-[#0f172a] hover:border-cyan-500"
+                      isDark ? "bg-[#1e293b] border-[#334155] text-cyan-400 hover:border-cyan-500/40" : "bg-white border-[#cbd5e1] text-[#0f172a] hover:border-blue-700"
                     }`}
                   >
-                    <CalendarDays className="w-3.5 h-3.5" />
+                    <CalendarDays className={`w-3.5 h-3.5 ${!isDark ? "text-blue-700" : ""}`} />
                     {formatSimDate(state.day, state.hour)}
                   </button>
                   {showSimDatePicker && (
@@ -215,11 +205,13 @@ function LayoutInner() {
                         type="datetime-local"
                         value={pickerValue}
                         onChange={e => setPickerValue(e.target.value)}
-                        className={`w-full text-[12px] rounded-lg px-2 py-1.5 mb-2 border ${isDark ? "bg-[#1e293b] border-[#334155] text-white" : "bg-[#f0f4f8] border-[#cbd5e1] text-[#0f172a]"}`}
+                        className={`w-full text-[12px] rounded-lg px-2 py-1.5 mb-2 border ${isDark ? "bg-[#1e293b] border-[#334155] text-white [color-scheme:dark]" : "bg-[#f0f4f8] border-[#cbd5e1] text-[#0f172a] [color-scheme:light]"}`}
                       />
                       <button
                         onClick={handleDateSeek}
-                        className="w-full text-[11px] py-1.5 rounded-lg bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/30 transition-colors"
+                        className={`w-full text-[11px] py-1.5 rounded-lg border transition-colors ${
+                          isDark ? "bg-cyan-500/20 border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/30" : "bg-blue-600/10 border-blue-600/20 text-blue-700 hover:bg-blue-600/20"
+                        }`}
                       >
                         OK
                       </button>

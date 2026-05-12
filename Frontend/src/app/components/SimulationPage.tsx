@@ -22,7 +22,7 @@ function dayToDateStr(day: number): string {
 }
 
 export function SimulationPage() {
-  const { state, stop, togglePause, updateSpeed, reset, setScenario } = useSim();
+  const { state, stop, togglePause, updateSpeed, reset, setScenario, confirmFastForward, cancelFastForward } = useSim();
   const { isDark } = useTheme();
   const [selectedBaggage, setSelectedBaggage] = useState<BaggageGroup | null>(null);
   const [showTracking, setShowTracking] = useState(true);
@@ -119,7 +119,7 @@ export function SimulationPage() {
     <div className={`h-[calc(100vh-3rem)] flex flex-col -m-4 relative transition-colors duration-200 ${rootBg}`}>
       {/* Barra de título */}
       <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-center py-3 pointer-events-none">
-        <h1 className={`text-[18px] tracking-wider ${isDark ? "text-cyan-400" : "text-[#0f172a]"}`} style={{ textShadow: isDark ? "0 0 20px #00e5ff60" : "none" }}>
+        <h1 className={`text-[18px] tracking-wider ${isDark ? "text-cyan-400" : "text-blue-800 font-bold"}`} style={{ textShadow: isDark ? "0 0 20px #00e5ff60" : "none" }}>
           Panel de Simulación Logística Global
         </h1>
       </div>
@@ -170,12 +170,12 @@ export function SimulationPage() {
                   return (
                     <div key={d} className="flex items-center gap-2">
                       <div className={`w-2 h-2 rounded-full shrink-0 ${
-                        isActive ? "bg-cyan-400 animate-pulse" : isPast ? "bg-cyan-400" : isDark ? "bg-[#1e293b]" : "bg-[#cbd5e1]"
+                        isActive ? (isDark ? "bg-cyan-400 animate-pulse" : "bg-blue-600 animate-pulse") : isPast ? (isDark ? "bg-cyan-400" : "bg-blue-600") : isDark ? "bg-[#1e293b]" : "bg-[#cbd5e1]"
                       }`} />
                       <div className={`flex-1 h-[1px] ${isDark ? "bg-[#1e293b]" : "bg-[#cbd5e1]"}`}>
-                        {(isActive || isPast) && <div className="h-full bg-cyan-400/30" style={{ width: isActive ? `${((state.hour) / 24) * 100}%` : "100%" }} />}
+                        {(isActive || isPast) && <div className={`h-full ${isDark ? "bg-cyan-400/30" : "bg-blue-600/30"}`} style={{ width: isActive ? `${((state.hour) / 24) * 100}%` : "100%" }} />}
                       </div>
-                      <span className={`text-[10px] ${isActive ? "text-cyan-400" : isPast ? isDark ? "text-white/60" : "text-[#475569]" : mutedText}`}>
+                      <span className={`text-[10px] ${isActive ? (isDark ? "text-cyan-400" : "text-blue-700") : isPast ? isDark ? "text-white/60" : "text-[#475569]" : mutedText}`}>
                         {dayToDateStr(d)}{isActive ? ` ${formatTime(state.hour)}` : ""}
                       </span>
                     </div>
@@ -187,8 +187,8 @@ export function SimulationPage() {
 
             {/* Tarjetas de estadísticas */}
             <div className="space-y-2">
-              <StatCard isDark={isDark} icon={<Plane className="w-4 h-4 text-cyan-400" />} label="Vuelos Activos" value={state.flights.filter(f => !f.cancelled).length.toLocaleString()} />
-              <StatCard isDark={isDark} icon={<Package className="w-4 h-4 text-cyan-400" />} label="Total Maletas" value={state.stats.totalRegistered.toLocaleString()} />
+              <StatCard isDark={isDark} icon={<Plane className={`w-4 h-4 ${isDark ? "text-cyan-400" : "text-blue-700"}`} />} label="Vuelos Activos" value={state.flights.filter(f => !f.cancelled).length.toLocaleString()} />
+              <StatCard isDark={isDark} icon={<Package className={`w-4 h-4 ${isDark ? "text-cyan-400" : "text-blue-700"}`} />} label="Total Maletas" value={state.stats.totalRegistered.toLocaleString()} />
             </div>
 
             {/* Controles */}
@@ -196,9 +196,11 @@ export function SimulationPage() {
               <div className="flex items-center gap-2 mb-2">
                 <button
                   onClick={togglePause}
-                  className="w-10 h-10 rounded-full bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center hover:bg-cyan-500/30 transition-colors"
+                  className={`w-10 h-10 rounded-full border flex items-center justify-center transition-colors ${
+                    isDark ? "bg-cyan-500/20 border-cyan-500/40 hover:bg-cyan-500/30" : "bg-blue-600/10 border-blue-600/30 hover:bg-blue-600/20"
+                  }`}
                 >
-                  {state.running ? <Pause className="w-5 h-5 text-cyan-400" /> : <Play className="w-5 h-5 text-cyan-400 ml-0.5" />}
+                  {state.running ? <Pause className={`w-5 h-5 ${isDark ? "text-cyan-400" : "text-blue-700"}`} /> : <Play className={`w-5 h-5 ml-0.5 ${isDark ? "text-cyan-400" : "text-blue-700"}`} />}
                 </button>
                 <button
                   onClick={stop}
@@ -211,13 +213,13 @@ export function SimulationPage() {
               <div className="flex items-center gap-1 mb-2">
                 <button
                   onClick={() => exportResults("json")}
-                  className={`flex-1 flex items-center justify-center gap-1 px-2 py-1 rounded-lg text-[9px] border transition-colors ${isDark ? "border-[#1a2744] text-white/60 hover:text-cyan-400 hover:border-cyan-500/30" : "border-[#cbd5e1] text-[#64748b] hover:text-cyan-600 hover:border-cyan-400"}`}
+                  className={`flex-1 flex items-center justify-center gap-1 px-2 py-1 rounded-lg text-[9px] border transition-colors ${isDark ? "border-[#1a2744] text-white/60 hover:text-cyan-400 hover:border-cyan-500/30" : "border-[#cbd5e1] text-[#64748b] hover:text-blue-700 hover:border-blue-400"}`}
                 >
                   <Download className="w-3 h-3" /> JSON
                 </button>
                 <button
                   onClick={() => exportResults("csv")}
-                  className={`flex-1 flex items-center justify-center gap-1 px-2 py-1 rounded-lg text-[9px] border transition-colors ${isDark ? "border-[#1a2744] text-white/60 hover:text-cyan-400 hover:border-cyan-500/30" : "border-[#cbd5e1] text-[#64748b] hover:text-cyan-600 hover:border-cyan-400"}`}
+                  className={`flex-1 flex items-center justify-center gap-1 px-2 py-1 rounded-lg text-[9px] border transition-colors ${isDark ? "border-[#1a2744] text-white/60 hover:text-cyan-400 hover:border-cyan-500/30" : "border-[#cbd5e1] text-[#64748b] hover:text-blue-700 hover:border-blue-400"}`}
                 >
                   <Download className="w-3 h-3" /> CSV
                 </button>
@@ -245,8 +247,8 @@ export function SimulationPage() {
                   }}
                   className={`w-full text-left px-2 py-1.5 rounded-lg text-[10px] transition-colors ${
                     (s.key === "tracking" ? viewMode === "tracking" : viewMode === "simulation" && state.scenario === s.key)
-                      ? "bg-cyan-500/15 text-cyan-400 border border-cyan-500/20"
-                      : `${subText} border border-transparent ${isDark ? "hover:bg-[#0f172a]" : "hover:bg-[#dde6f0]"} hover:text-cyan-500`
+                      ? isDark ? "bg-cyan-500/15 text-cyan-400 border border-cyan-500/20" : "bg-blue-600/10 text-blue-700 border border-blue-600/20"
+                      : `${subText} border border-transparent ${isDark ? "hover:bg-[#0f172a] hover:text-cyan-500" : "hover:bg-[#dde6f0] hover:text-blue-700"}`
                   }`}
                 >
                   {s.label}
@@ -287,8 +289,8 @@ export function SimulationPage() {
 
             {/* Stats */}
             <div className="space-y-2">
-              <StatCard isDark={isDark} icon={<Plane className="w-4 h-4 text-cyan-400" />} label="Vuelos Activos" value={state.flights.filter(f => !f.cancelled).length.toLocaleString()} />
-              <StatCard isDark={isDark} icon={<Package className="w-4 h-4 text-cyan-400" />} label="Total Maletas" value={state.stats.totalRegistered.toLocaleString()} />
+              <StatCard isDark={isDark} icon={<Plane className={`w-4 h-4 ${isDark ? "text-cyan-400" : "text-blue-700"}`} />} label="Vuelos Activos" value={state.flights.filter(f => !f.cancelled).length.toLocaleString()} />
+              <StatCard isDark={isDark} icon={<Package className={`w-4 h-4 ${isDark ? "text-cyan-400" : "text-blue-700"}`} />} label="Total Maletas" value={state.stats.totalRegistered.toLocaleString()} />
             </div>
 
             {/* Escenarios */}
@@ -310,8 +312,8 @@ export function SimulationPage() {
                 }}
                 className={`w-full text-left px-2 py-1.5 rounded-lg text-[10px] transition-colors ${
                   (s.key === "tracking" ? viewMode === "tracking" : viewMode === "simulation" && state.scenario === s.key)
-                    ? "bg-cyan-500/15 text-cyan-400 border border-cyan-500/20"
-                    : `${subText} border border-transparent ${isDark ? "hover:bg-[#0f172a]" : "hover:bg-[#dde6f0]"} hover:text-cyan-500`
+                    ? isDark ? "bg-cyan-500/15 text-cyan-400 border border-cyan-500/20" : "bg-blue-600/10 text-blue-700 border border-blue-600/20"
+                    : `${subText} border border-transparent ${isDark ? "hover:bg-[#0f172a] hover:text-cyan-500" : "hover:bg-[#dde6f0] hover:text-blue-700"}`
                 }`}
               >
                 {s.label}
@@ -343,7 +345,7 @@ export function SimulationPage() {
 
             <button
               onClick={() => setShowTracking(!showTracking)}
-              className={`absolute right-4 top-3 z-20 px-2 py-1 border rounded-lg text-[10px] transition-colors ${isDark ? "bg-[#0a0f1ecc] border-[#1a2744] text-white/70 hover:text-cyan-400" : "bg-white/80 border-[#cbd5e1] text-[#475569] hover:text-cyan-500"}`}
+              className={`absolute right-4 top-3 z-20 px-2 py-1 border rounded-lg text-[10px] transition-colors ${isDark ? "bg-[#0a0f1ecc] border-[#1a2744] text-white/70 hover:text-cyan-400" : "bg-white/80 border-[#cbd5e1] text-[#475569] hover:text-blue-700"}`}
             >
               {showTracking ? "Ocultar" : "Rastreo"}
             </button>
@@ -351,9 +353,73 @@ export function SimulationPage() {
         )}
       </div>
 
-      {/* Highlights overlay (RF70) - shown on stop or collapse */}
+      {/* Highlights overlay (RF70) - shown on stop or collapse. Closing also resets when triggered by stop. */}
       {showHighlights && (
-        <HighlightsPanel state={state} isDark={isDark} onClose={() => setShowHighlights(false)} onReset={() => { setShowHighlights(false); reset("weekly", 1); }} />
+        <HighlightsPanel
+          state={state}
+          isDark={isDark}
+          onClose={() => {
+            setShowHighlights(false);
+            if ((state as any).stopped) reset("weekly", 1);
+          }}
+          onReset={() => { setShowHighlights(false); reset("weekly", 1); }}
+        />
+      )}
+
+      {/* Fast Forward — waiting popup (read-only mode while fast-forwarding) */}
+      {state.fastForwardState === "running" && (
+        <div className="absolute inset-0 z-50 bg-black/60 flex items-center justify-center">
+          <div className={`border rounded-xl w-full max-w-sm mx-4 p-5 ${isDark ? "bg-[#0f172a] border-[#334155]" : "bg-white border-[#cbd5e1]"}`}>
+            <div className="flex items-center gap-2 mb-3">
+              <div className={`w-4 h-4 rounded-full border-2 border-t-transparent animate-spin ${isDark ? "border-cyan-400" : "border-blue-600"}`} />
+              <h3 className={`text-[16px] font-medium ${isDark ? "text-[#e2e8f0]" : "text-[#0f172a]"}`}>
+                Acelerando simulación x10
+              </h3>
+            </div>
+            <p className={`text-[13px] mb-2 ${isDark ? "text-[#94a3b8]" : "text-[#475569]"}`}>
+              Esperando a llegar a la fecha {state.targetDateStr}
+            </p>
+            <p className={`text-[11px] mb-5 ${isDark ? "text-[#64748b]" : "text-[#94a3b8]"}`}>
+              Día actual: {state.day} · La simulación está en modo solo lectura mientras avanza.
+            </p>
+            <div className="flex justify-end">
+              <button
+                onClick={cancelFastForward}
+                className={`px-4 py-2 text-[12px] border rounded-lg ${isDark ? "border-[#334155] text-[#94a3b8] hover:bg-[#1e293b]" : "border-[#cbd5e1] text-[#475569] hover:bg-[#f1f5f9]"}`}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Fast Forward — reached popup (paused, ready to continue) */}
+      {state.fastForwardState === "reached" && (
+        <div className="absolute inset-0 z-50 bg-black/60 flex items-center justify-center">
+          <div className={`border rounded-xl w-full max-w-sm mx-4 p-5 ${isDark ? "bg-[#0f172a] border-[#334155]" : "bg-white border-[#cbd5e1]"}`}>
+            <h3 className={`text-[16px] font-medium mb-3 ${isDark ? "text-[#e2e8f0]" : "text-[#0f172a]"}`}>
+              Comenzar a partir de la fecha {state.targetDateStr}
+            </h3>
+            <p className={`text-[13px] mb-6 ${isDark ? "text-[#94a3b8]" : "text-[#475569]"}`}>
+              La simulación está pausada y lista para comenzar.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={cancelFastForward}
+                className={`px-4 py-2 text-[12px] border rounded-lg ${isDark ? "border-[#334155] text-[#94a3b8] hover:bg-[#1e293b]" : "border-[#cbd5e1] text-[#475569] hover:bg-[#f1f5f9]"}`}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmFastForward}
+                className={`px-4 py-2 text-[12px] rounded-lg text-white ${isDark ? "bg-cyan-600 hover:bg-cyan-700" : "bg-blue-600 hover:bg-blue-700"}`}
+              >
+                Iniciar
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Overlay de colapso - hidden when highlights are shown */}
@@ -363,7 +429,7 @@ export function SimulationPage() {
             <div className="text-red-400 text-[16px] mb-2">Sistema Colapsado</div>
             <div className="text-[12px] text-white mb-4">{state.collapseReason}</div>
             <div className="flex items-center gap-2 justify-center">
-              <button onClick={() => { setShowHighlights(true); }} className="px-4 py-2 bg-cyan-500/20 border border-cyan-500/30 rounded-lg text-cyan-400 text-[12px] hover:bg-cyan-500/30">
+              <button onClick={() => { setShowHighlights(true); }} className={`px-4 py-2 border rounded-lg text-[12px] ${isDark ? "bg-cyan-500/20 border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/30" : "bg-blue-600/10 border-blue-600/20 text-blue-700 hover:bg-blue-600/20"}`}>
                 Ver Highlights
               </button>
               <button onClick={() => reset("weekly", 1)} className="px-4 py-2 bg-red-500/20 border border-red-500/30 rounded-lg text-red-400 text-[12px] hover:bg-red-500/30">
@@ -439,7 +505,7 @@ function SpeedSlider({ speed, onChange, isDark }: { speed: number; onChange: (sp
         <div className={`absolute top-[11px] left-0 right-0 h-[2px] rounded-full ${isDark ? "bg-[#1e293b]" : "bg-[#cbd5e1]"}`} />
         {/* Active track */}
         <div
-          className="absolute top-[11px] left-0 h-[2px] rounded-full bg-cyan-400 transition-[width] duration-150"
+          className={`absolute top-[11px] left-0 h-[2px] rounded-full transition-[width] duration-150 ${isDark ? "bg-cyan-400" : "bg-blue-600"}`}
           style={{ width: thumbLeft }}
         />
         {/* Tick marks */}
@@ -447,14 +513,14 @@ function SpeedSlider({ speed, onChange, isDark }: { speed: number; onChange: (sp
           <div
             key={s}
             className={`absolute top-[6px] w-[2px] h-3 rounded-full -translate-x-1/2 ${
-              i <= currentIdx ? "bg-cyan-400" : isDark ? "bg-[#475569]" : "bg-[#94a3b8]"
+              i <= currentIdx ? (isDark ? "bg-cyan-400" : "bg-blue-600") : isDark ? "bg-[#475569]" : "bg-[#94a3b8]"
             }`}
             style={{ left: `${(i / (speeds.length - 1)) * 100}%` }}
           />
         ))}
         {/* Draggable thumb */}
         <div
-          className="absolute top-[6px] w-3 h-3 -translate-x-1/2 rounded-full bg-cyan-400 border-2 border-cyan-300 shadow-[0_0_6px_#00e5ff80] transition-[left] duration-150 cursor-grab active:cursor-grabbing"
+          className={`absolute top-[6px] w-3 h-3 -translate-x-1/2 rounded-full border-2 transition-[left] duration-150 cursor-grab active:cursor-grabbing ${isDark ? "bg-cyan-400 border-cyan-300 shadow-[0_0_6px_#00e5ff80]" : "bg-blue-600 border-blue-400 shadow-[0_0_6px_#2563eb80]"}`}
           style={{ left: thumbLeft }}
         />
       </div>
@@ -465,7 +531,7 @@ function SpeedSlider({ speed, onChange, isDark }: { speed: number; onChange: (sp
             key={s}
             onClick={() => onChange(s)}
             className={`absolute -translate-x-1/2 text-[9px] transition-colors ${
-              i === currentIdx ? "text-cyan-400" : isDark ? "text-[#64748b]" : "text-[#94a3b8]"
+              i === currentIdx ? (isDark ? "text-cyan-400" : "text-blue-700") : isDark ? "text-[#64748b]" : "text-[#94a3b8]"
             }`}
             style={{ left: `${(i / (speeds.length - 1)) * 100}%` }}
           >
@@ -607,7 +673,7 @@ function HighlightsPanel({ state, isDark, onClose, onReset }: {
             Cerrar
           </button>
           <button onClick={onReset}
-            className="px-4 py-1.5 rounded-lg text-[12px] bg-cyan-600 hover:bg-cyan-500 text-white transition-colors">
+            className={`px-4 py-1.5 rounded-lg text-[12px] text-white transition-colors ${isDark ? "bg-cyan-600 hover:bg-cyan-500" : "bg-blue-600 hover:bg-blue-700"}`}>
             Nueva Simulación
           </button>
         </div>

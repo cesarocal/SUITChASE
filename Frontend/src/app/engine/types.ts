@@ -1,3 +1,5 @@
+export const SIM_BASE_DATE = new Date(2026, 3, 2, 0, 0, 0);
+
 export interface BaggageGroup {
   id: string;
   airline: string;
@@ -36,6 +38,9 @@ export interface SimulationState {
   speed: number;
   scenario: "daily" | "weekly" | "collapse";
   turnaroundHours: number;
+  fastForwardTarget?: number | null;
+  fastForwardState?: "idle" | "running" | "reached";
+  targetDateStr?: string;
 }
 
 export interface AirportState {

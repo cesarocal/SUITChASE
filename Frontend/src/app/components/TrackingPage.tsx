@@ -39,7 +39,7 @@ export function TrackingPage({ embedded = false }: { embedded?: boolean }) {
     <div className={`${embedded ? "h-full" : "h-[calc(100vh-3rem)] -m-4"} flex flex-col relative transition-colors duration-200 ${rootBg}`}>
       {!embedded && (
       <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-center py-3 pointer-events-none">
-        <h1 className={`text-[18px] tracking-wider ${isDark ? "text-cyan-400" : "text-[#0f172a]"}`} style={{ textShadow: isDark ? "0 0 20px #00e5ff60" : "none" }}>
+        <h1 className={`text-[18px] tracking-wider ${isDark ? "text-cyan-400" : "text-blue-800 font-bold"}`} style={{ textShadow: isDark ? "0 0 20px #00e5ff60" : "none" }}>
           Tracking de Equipaje en Tiempo Real
         </h1>
       </div>
@@ -78,8 +78,8 @@ export function TrackingPage({ embedded = false }: { embedded?: boolean }) {
 
             {/* Tarjetas de estadísticas */}
             <div className="space-y-2">
-              <StatCard isDark={isDark} icon={<Plane className="w-4 h-4 text-cyan-400" />} label="Vuelos Activos" value={state.flights.filter(f => !f.cancelled).length.toLocaleString()} />
-              <StatCard isDark={isDark} icon={<Package className="w-4 h-4 text-cyan-400" />} label="Total Maletas" value={state.stats.totalRegistered.toLocaleString()} />
+              <StatCard isDark={isDark} icon={<Plane className={`w-4 h-4 ${isDark ? "text-cyan-400" : "text-blue-700"}`} />} label="Vuelos Activos" value={state.flights.filter(f => !f.cancelled).length.toLocaleString()} />
+              <StatCard isDark={isDark} icon={<Package className={`w-4 h-4 ${isDark ? "text-cyan-400" : "text-blue-700"}`} />} label="Total Maletas" value={state.stats.totalRegistered.toLocaleString()} />
             </div>
             <div className="shrink-0 mb-auto" />
           </div>
@@ -103,7 +103,7 @@ export function TrackingPage({ embedded = false }: { embedded?: boolean }) {
 
         <button
           onClick={() => setShowTracking(!showTracking)}
-          className={`absolute right-4 ${embedded ? "top-2" : "top-3"} z-20 px-2 py-1 border rounded-lg text-[10px] transition-colors ${isDark ? "bg-[#0a0f1ecc] border-[#1a2744] text-white/70 hover:text-cyan-400" : "bg-white/80 border-[#cbd5e1] text-[#475569] hover:text-cyan-500"}`}
+          className={`absolute right-4 ${embedded ? "top-2" : "top-3"} z-20 px-2 py-1 border rounded-lg text-[10px] transition-colors ${isDark ? "bg-[#0a0f1ecc] border-[#1a2744] text-white/70 hover:text-cyan-400" : "bg-white/80 border-[#cbd5e1] text-[#475569] hover:text-blue-700"}`}
         >
           {showTracking ? "Ocultar" : "Rastreo"}
         </button>

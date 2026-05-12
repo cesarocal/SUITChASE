@@ -6,13 +6,31 @@ import { Button } from "./ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Slider } from "./ui/slider";
 import { Badge } from "./ui/badge";
-import { Play, Pause, Square, Zap, Settings } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import { Calendar } from "./ui/calendar";
+import { Play, Pause, Square, Zap, Settings, FastForward, Calendar as CalendarIcon } from "lucide-react";
+
+import { SIM_BASE_DATE } from "../engine/types";
 
 export function SimControls() {
-  const { state, start, reset, togglePause, updateSpeed } = useSim();
+  const { state, start, reset, togglePause, updateSpeed, startFastForward } = useSim();
   const { isDark } = useTheme();
   const [scenario, setScenario] = useState<"daily" | "weekly" | "collapse">("weekly");
   const [turnaround, setTurnaround] = useState(1);
+  const defaultTarget = new Date(SIM_BASE_DATE);
+  defaultTarget.setDate(defaultTarget.getDate() + 1);
+  const [targetDate, setTargetDate] = useState<Date>(defaultTarget);
+  const [calendarOpen, setCalendarOpen] = useState(false);
+
+  const handleFastForward = () => {
+    if (!targetDate) return;
+    const dt = new Date(targetDate);
+    dt.setHours(0, 0, 0, 0);
+    startFastForward(dt);
+  };
+
+  const formatDateLabel = (d: Date) =>
+    d.toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" });
 
   const cardBg = isDark ? "bg-[#1e293b]/50 border-[#334155]" : "bg-white border-[#cbd5e1]";
   const titleColor = isDark ? "text-[#e2e8f0]" : "text-[#0f172a]";
@@ -26,6 +44,9 @@ export function SimControls() {
   const speedBtnCls = (active: boolean) => active
     ? "bg-blue-600 text-white"
     : isDark ? "border-[#334155] text-[#94a3b8]" : "border-[#cbd5e1] text-[#475569]";
+
+  const minDate = SIM_BASE_DATE;
+  const ffDisabled = state.fastForwardState === "running";
 
   return (
     <Card className={cardBg}>
@@ -69,10 +90,56 @@ export function SimControls() {
                 variant={state.speed === s ? "default" : "outline"}
                 className={`text-[11px] px-2 py-1 ${speedBtnCls(state.speed === s)}`}
                 onClick={() => updateSpeed(s)}
+                disabled={state.fastForwardState === "running"}
               >
                 x{s}
               </Button>
             ))}
+          </div>
+        </div>
+
+        {/* Fast Forward to Date */}
+        <div>
+          <label className={`${labelColor} text-[12px] mb-1 block`}>
+            Acelerar hasta fecha
+          </label>
+          <div className="flex gap-2">
+            <Popover open={calendarOpen} onOpenChange={(o) => !ffDisabled && setCalendarOpen(o)}>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  disabled={ffDisabled}
+                  className={`flex-1 flex items-center gap-2 rounded-md text-[12px] px-2 py-1.5 border transition-colors ${inputBg} ${ffDisabled ? "opacity-50 cursor-not-allowed" : (isDark ? "hover:border-cyan-500/40" : "hover:border-blue-600/40")}`}
+                >
+                  <CalendarIcon className={`w-3.5 h-3.5 ${isDark ? "text-[#94a3b8]" : "text-[#64748b]"}`} />
+                  <span className="truncate">{formatDateLabel(targetDate)}</span>
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className={`w-auto p-0 ${selectBg}`} align="start">
+                <Calendar
+                  mode="single"
+                  selected={targetDate}
+                  onSelect={(d) => {
+                    if (d) {
+                      setTargetDate(d);
+                      setCalendarOpen(false);
+                    }
+                  }}
+                  disabled={{ before: minDate }}
+                  defaultMonth={targetDate}
+                  required
+                />
+              </PopoverContent>
+            </Popover>
+            <Button
+              size="sm"
+              variant="outline"
+              className={btnOutline}
+              onClick={handleFastForward}
+              disabled={ffDisabled}
+            >
+              <FastForward className="w-3 h-3" />
+            </Button>
           </div>
         </div>
 

@@ -1,7 +1,6 @@
 import React from "react";
 import { Outlet, NavLink } from "react-router";
-import { useTheme, ThemeProvider } from "../context/ThemeContext";
-import { SimProvider } from "../context/SimContext";
+import { useTheme } from "../context/ThemeContext";
 import { Briefcase, Radar, Sun, Moon } from "lucide-react";
 
 function useCurrentTime() {
@@ -76,11 +75,5 @@ function AirlineLayoutInner() {
 }
 
 export function AirlineLayout() {
-  return (
-    <ThemeProvider>
-      <SimProvider>
-        <AirlineLayoutInner />
-      </SimProvider>
-    </ThemeProvider>
-  );
+  return <AirlineLayoutInner />;
 }

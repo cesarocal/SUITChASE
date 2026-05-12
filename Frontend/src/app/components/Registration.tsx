@@ -53,7 +53,7 @@ export function Registration({ showBatchImport = true }: { showBatchImport?: boo
   const cellTextSub = isDark ? "text-white/80" : "text-[#475569]";
   const rowBorder = isDark ? "border-[#1e293b]" : "border-[#e2e8f0]";
   const rowHover = isDark ? "hover:bg-[#0f172a]/50" : "hover:bg-[#f1f5f9]";
-  const cyanText = isDark ? "text-cyan-400" : "text-cyan-600";
+  const cyanText = isDark ? "text-cyan-400" : "text-blue-700";
   const searchIconColor = isDark ? "text-white/40" : "text-[#94a3b8]";
   const headerBorder = isDark ? "border-[#334155]" : "border-[#e2e8f0]";
   const dropdownBg = isDark ? "bg-[#1e293b]" : "bg-white";
@@ -265,7 +265,7 @@ export function Registration({ showBatchImport = true }: { showBatchImport?: boo
                 onChange={handleFileUpload}
                 className="hidden"
               />
-              <Button onClick={() => fileRef.current?.click()} className="bg-cyan-400 text-black hover:bg-cyan-500">
+              <Button onClick={() => fileRef.current?.click()} className={isDark ? "bg-cyan-400 text-black hover:bg-cyan-500" : "bg-blue-600 text-white hover:bg-blue-700"}>
                 <FileText className="w-4 h-4 mr-2" /> Seleccionar Archivo (CSV/JSON)
               </Button>
               <div className={`text-[11px] ${subtlerText}`}>

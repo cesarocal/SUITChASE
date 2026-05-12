@@ -212,7 +212,7 @@ export function AirportsPanel() {
   const inputCls = `w-full rounded-lg text-[13px] px-3 py-2 border transition-colors focus:outline-none ${
     isDark
       ? "bg-[#1e293b] border-[#334155] text-white placeholder:text-white/30 focus:border-cyan-500/50"
-      : "bg-[#f8fafc] border-[#cbd5e1] text-[#0f172a] placeholder:text-[#94a3b8] focus:border-cyan-500"
+      : "bg-[#f8fafc] border-[#cbd5e1] text-[#0f172a] placeholder:text-[#94a3b8] focus:border-blue-500"
   }`;
   const labelCls = `block text-[12px] mb-1 ${textSecondary}`;
   const errorCls = "text-red-400 text-[11px] mt-0.5";
@@ -224,7 +224,7 @@ export function AirportsPanel() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <Warehouse className={`w-5 h-5 ${isDark ? "text-cyan-400" : "text-cyan-600"}`} />
+          <Warehouse className={`w-5 h-5 ${isDark ? "text-cyan-400" : "text-blue-700"}`} />
           <h1 className={`text-[20px] ${textPrimary}`}>Aeropuertos Tasf.B2B</h1>
           <span className={`text-[12px] px-2 py-0.5 rounded-full ${isDark ? "bg-[#1e293b] text-[#94a3b8]" : "bg-[#e2e8f0] text-[#64748b]"}`}>
             {airportsList.length} registrados
@@ -259,7 +259,7 @@ export function AirportsPanel() {
           </div>
           <button
             onClick={openCreate}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] bg-cyan-600 hover:bg-cyan-500 text-white transition-colors shrink-0"
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] text-white transition-colors shrink-0 ${isDark ? "bg-cyan-600 hover:bg-cyan-500" : "bg-blue-600 hover:bg-blue-700"}`}
           >
             <Plus className="w-3.5 h-3.5" /> Nuevo Aeropuerto
           </button>
@@ -299,7 +299,7 @@ export function AirportsPanel() {
                 return (
                   <tr key={a.code} className={`border-t ${isDark ? "border-[#1e293b]" : "border-[#e2e8f0]"} ${rowHover} transition-colors`}>
                     <td className={`px-3 py-2.5`}>
-                      <span className={`px-2 py-0.5 rounded text-[11px] font-mono ${isDark ? "bg-cyan-500/10 text-cyan-400" : "bg-cyan-50 text-cyan-700"}`}>
+                      <span className={`px-2 py-0.5 rounded text-[11px] font-mono ${isDark ? "bg-cyan-500/10 text-cyan-400" : "bg-blue-600/10 text-blue-800"}`}>
                         {a.code}
                       </span>
                     </td>
@@ -390,8 +390,8 @@ export function AirportsPanel() {
       <div className={`border rounded-xl overflow-hidden ${cardBg}`}>
         <div className={`px-5 py-4 border-b ${isDark ? "border-[#1e293b]" : "border-[#e2e8f0]"}`}>
           <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isDark ? "bg-cyan-500/10" : "bg-cyan-50"}`}>
-              <Upload className={`w-5 h-5 ${isDark ? "text-cyan-400" : "text-cyan-600"}`} />
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isDark ? "bg-cyan-500/10" : "bg-blue-600/10"}`}>
+              <Upload className={`w-5 h-5 ${isDark ? "text-cyan-400" : "text-blue-700"}`} />
             </div>
             <div>
               <h3 className={`text-[14px] ${textPrimary}`}>Importación en Lote</h3>
@@ -404,8 +404,8 @@ export function AirportsPanel() {
             {/* Left: Info */}
             <div className="flex-1 space-y-3">
               <div className={`text-[12px] ${textSecondary}`}>
-                <p className="mb-2">El archivo debe seguir el formato <span className={isDark ? "text-cyan-400" : "text-cyan-600"}>PDDS 25-2</span>. Cada línea representa un aeropuerto:</p>
-                <div className={`rounded-lg p-3 font-mono text-[11px] ${isDark ? "bg-[#1e293b] text-cyan-300" : "bg-[#f1f5f9] text-cyan-700"}`}>
+                <p className="mb-2">El archivo debe seguir el formato <span className={isDark ? "text-cyan-400" : "text-blue-700"}>PDDS 25-2</span>. Cada línea representa un aeropuerto:</p>
+                <div className={`rounded-lg p-3 font-mono text-[11px] ${isDark ? "bg-[#1e293b] text-cyan-300" : "bg-[#f1f5f9] text-blue-800"}`}>
                   01 SKBO Bogota &nbsp;&nbsp;Colombia &nbsp;&nbsp;bogo -5 430 Latitude: 4°42'0"N Longitude: 74°4'0"W
                 </div>
               </div>
@@ -437,7 +437,7 @@ export function AirportsPanel() {
                 className={`flex items-center gap-2 px-5 py-3 rounded-xl text-[13px] transition-all ${
                   isDark
                     ? "bg-gradient-to-r from-cyan-600/20 to-cyan-500/10 border border-cyan-500/30 text-cyan-400 hover:from-cyan-600/30 hover:to-cyan-500/20"
-                    : "bg-gradient-to-r from-cyan-50 to-cyan-100 border border-cyan-200 text-cyan-700 hover:from-cyan-100 hover:to-cyan-200"
+                    : "bg-gradient-to-r from-blue-600/20 to-blue-500/10 border border-blue-500/30 text-blue-700 hover:from-blue-600/30 hover:to-blue-500/20"
                 }`}
               >
                 <Upload className="w-4 h-4" />
@@ -558,7 +558,7 @@ export function AirportsPanel() {
               </button>
               <button
                 onClick={handleSave}
-                className="px-4 py-1.5 rounded-lg text-[12px] bg-cyan-600 hover:bg-cyan-500 text-white transition-colors"
+                className={`px-4 py-1.5 rounded-lg text-[12px] text-white transition-colors ${isDark ? "bg-cyan-600 hover:bg-cyan-500" : "bg-blue-600 hover:bg-blue-700"}`}
               >
                 {modalMode === "create" ? "Registrar" : "Guardar Cambios"}
               </button>

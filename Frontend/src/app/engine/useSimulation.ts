@@ -4,6 +4,7 @@ import { planRoute } from "./planner";
 import { getDeadlineHours } from "../data/flights";
 import { AIRPORTS as DEFAULT_AIRPORTS, type Airport } from "../data/airports";
 import type { SimulationState, SimEvent, BaggageGroup, Airline } from "./types";
+import { SIM_BASE_DATE } from "./types";
 import { toast } from "sonner";
 
 const DEFAULT_AIRLINES: Airline[] = [
@@ -31,6 +32,13 @@ export function useSimulation() {
         if (!parsed.airports || !parsed.flights || !parsed.stats || !parsed.baggageGroups) {
           throw new Error("Invalid state");
         }
+        // Upgrade capacities
+        for (const code in parsed.airports) {
+          const defaultA = DEFAULT_AIRPORTS.find(a => a.code === code);
+          if (defaultA && defaultA.warehouseCapacity > parsed.airports[code].capacity) {
+            parsed.airports[code].capacity = defaultA.warehouseCapacity;
+          }
+        }
         return parsed;
       }
     } catch {
@@ -51,11 +59,15 @@ export function useSimulation() {
       const saved = localStorage.getItem("suitchase_airports");
       if (saved) {
         const parsed = JSON.parse(saved) as Airport[];
-        // Migrate: add timezone if missing from old data
-        return parsed.map(a => ({
-          ...a,
-          timezone: a.timezone || "UTC+0",
-        }));
+        // Migrate: add timezone if missing from old data, and upgrade capacities
+        return parsed.map(a => {
+          const defaultA = DEFAULT_AIRPORTS.find(da => da.code === a.code);
+          return {
+            ...a,
+            timezone: a.timezone || "UTC+0",
+            warehouseCapacity: defaultA && defaultA.warehouseCapacity > a.warehouseCapacity ? defaultA.warehouseCapacity : a.warehouseCapacity,
+          };
+        });
       }
     } catch {}
     return [...DEFAULT_AIRPORTS];
@@ -498,6 +510,75 @@ export function useSimulation() {
     setState(prev => ({ ...prev, scenario }));
   }, []);
 
+  const startFastForward = useCallback((targetDate: Date) => {
+    // Compute target hours relative to the data start date (SIM_BASE_DATE)
+    const base = new Date(SIM_BASE_DATE);
+    const target = new Date(targetDate);
+    const diffMs = target.getTime() - base.getTime();
+    const targetHours = diffMs / (1000 * 60 * 60);
+
+    if (targetHours <= 0) {
+      toast.error("La fecha debe ser posterior al inicio de los datos");
+      return;
+    }
+
+    // Stop any running loop before re-initializing
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+
+    setSpeed(10);
+    setState(prev => {
+      // Reset simulation to data start (day 1, hour 0) and clear runtime data
+      const fresh = createInitialState(prev.scenario, prev.turnaroundHours);
+      return {
+        ...fresh,
+        // preserve persisted flights/airports structure from current state if user edited them
+        flights: prev.flights.length > 0 ? prev.flights.map(f => ({ ...f, currentLoad: 0, cancelled: false })) : fresh.flights,
+        airports: fresh.airports,
+        fastForwardTarget: targetHours,
+        fastForwardState: "running",
+        targetDateStr: targetDate.toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" }),
+        speed: 10,
+        running: true,
+        startTime: 0,
+        currentTime: 0,
+        day: 1,
+        hour: 0,
+        collapsed: false,
+        collapseReason: "",
+        stopped: false,
+      } as any;
+    });
+    setEvents([]);
+  }, []);
+
+  const confirmFastForward = useCallback(() => {
+    setSpeed(1);
+    setState(prev => ({
+      ...prev,
+      fastForwardTarget: null,
+      fastForwardState: "idle",
+      targetDateStr: undefined,
+      running: true,
+      speed: 1,
+      startTime: prev.currentTime, // Reset start time so it runs a full duration from now
+    }));
+  }, []);
+
+  const cancelFastForward = useCallback(() => {
+    setSpeed(1);
+    setState(prev => ({
+      ...prev,
+      fastForwardTarget: null,
+      fastForwardState: "idle",
+      targetDateStr: undefined,
+      running: false,
+      speed: 1,
+    }));
+  }, []);
+
   const clearFlights = () => {
     setState(prev => ({ ...prev, flights: [] }));
   };
@@ -520,13 +601,26 @@ export function useSimulation() {
 
         const maxDuration = prev.scenario === "weekly" ? 120 : prev.scenario === "daily" ? 24 : 4320;
         const elapsed = prev.currentTime - (prev.startTime || 0);
-        if (elapsed >= maxDuration) {
+        if (elapsed >= maxDuration && (!prev.fastForwardTarget || prev.fastForwardTarget < maxDuration)) {
           return { ...prev, running: false };
         }
 
         const result = simulateStep(prev, dt);
+        
+        let nextState = result.state;
+        
+        if (nextState.fastForwardState === "running" && nextState.fastForwardTarget != null) {
+          if (nextState.currentTime >= nextState.fastForwardTarget) {
+            nextState = {
+              ...nextState,
+              running: false,
+              fastForwardState: "reached",
+            };
+          }
+        }
+
         setEvents(e => [...e.slice(-200), ...result.events]);
-        return result.state;
+        return nextState;
       });
     };
 
@@ -597,5 +691,8 @@ export function useSimulation() {
     deleteAirline,
     seekTo,
     setScenario,
+    startFastForward,
+    confirmFastForward,
+    cancelFastForward,
   };
 }

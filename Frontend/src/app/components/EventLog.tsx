@@ -5,14 +5,14 @@ import { ScrollArea } from "./ui/scroll-area";
 import type { SimEvent } from "../engine/types";
 import { Package, Plane, MapPin, CheckCircle, XCircle, AlertTriangle, Cog } from "lucide-react";
 
-const ICONS: Record<string, React.ReactNode> = {
-  register: <Package className="w-3 h-3 text-blue-400 shrink-0" />,
-  depart: <Plane className="w-3 h-3 text-cyan-400 shrink-0" />,
-  arrive: <MapPin className="w-3 h-3 text-amber-400 shrink-0" />,
-  deliver: <CheckCircle className="w-3 h-3 text-green-400 shrink-0" />,
-  cancel: <XCircle className="w-3 h-3 text-red-400 shrink-0" />,
-  collapse: <AlertTriangle className="w-3 h-3 text-red-500 shrink-0" />,
-  system: <Cog className="w-3 h-3 text-orange-400 shrink-0" />,
+const ICONS: Record<string, (isDark: boolean) => React.ReactNode> = {
+  register: (isDark) => <Package className={`w-3 h-3 shrink-0 ${isDark ? "text-blue-400" : "text-blue-600"}`} />,
+  depart: (isDark) => <Plane className={`w-3 h-3 shrink-0 ${isDark ? "text-cyan-400" : "text-blue-700"}`} />,
+  arrive: (isDark) => <MapPin className={`w-3 h-3 shrink-0 ${isDark ? "text-amber-400" : "text-amber-600"}`} />,
+  deliver: (isDark) => <CheckCircle className={`w-3 h-3 shrink-0 ${isDark ? "text-green-400" : "text-green-600"}`} />,
+  cancel: (isDark) => <XCircle className={`w-3 h-3 shrink-0 ${isDark ? "text-red-400" : "text-red-600"}`} />,
+  collapse: (isDark) => <AlertTriangle className={`w-3 h-3 shrink-0 ${isDark ? "text-red-500" : "text-red-700"}`} />,
+  system: (isDark) => <Cog className={`w-3 h-3 shrink-0 ${isDark ? "text-orange-400" : "text-orange-600"}`} />,
 };
 
 export function EventLog({ events }: { events: SimEvent[] }) {
@@ -35,7 +35,7 @@ export function EventLog({ events }: { events: SimEvent[] }) {
           <div className="space-y-1 pr-3">
             {recent.map((e, i) => (
               <div key={i} className={`flex items-start gap-2 py-1 border-b ${dividerCls}`}>
-                {ICONS[e.type] || ICONS.register}
+                {ICONS[e.type] ? ICONS[e.type](isDark) : ICONS.register(isDark)}
                 <div className="min-w-0">
                   <span className={`text-[10px] mr-2 ${timeCls}`}>
                     D{Math.floor(e.time / 24 + 1)} {String(Math.floor(e.time % 24)).padStart(2, "0")}:{String(Math.round((e.time % 1) * 60)).padStart(2, "0")}

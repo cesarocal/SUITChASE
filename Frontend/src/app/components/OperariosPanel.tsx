@@ -180,7 +180,7 @@ export function OperariosPanel() {
   const inputCls = `w-full rounded-lg text-[13px] px-3 py-2 border transition-colors focus:outline-none ${
     isDark
       ? "bg-[#1e293b] border-[#334155] text-white placeholder:text-white/30 focus:border-cyan-500/50"
-      : "bg-[#f8fafc] border-[#cbd5e1] text-[#0f172a] placeholder:text-[#94a3b8] focus:border-cyan-500"
+      : "bg-[#f8fafc] border-[#cbd5e1] text-[#0f172a] placeholder:text-[#94a3b8] focus:border-blue-500"
   }`;
   const labelCls = `block text-[12px] mb-1 ${textSecondary}`;
   const errorCls = "text-red-400 text-[11px] mt-0.5";
@@ -192,7 +192,7 @@ export function OperariosPanel() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <Users className={`w-5 h-5 ${isDark ? "text-cyan-400" : "text-cyan-600"}`} />
+          <Users className={`w-5 h-5 ${isDark ? "text-cyan-400" : "text-blue-700"}`} />
           <h1 className={`text-[20px] ${textPrimary}`}>Operarios Tasf.B2B</h1>
           <span className={`text-[12px] px-2 py-0.5 rounded-full ${isDark ? "bg-[#1e293b] text-[#94a3b8]" : "bg-[#e2e8f0] text-[#64748b]"}`}>
             {operarios.length} registrados
@@ -214,7 +214,7 @@ export function OperariosPanel() {
           </div>
           <button
             onClick={openCreate}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] bg-cyan-600 hover:bg-cyan-500 text-white transition-colors shrink-0"
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] text-white transition-colors shrink-0 ${isDark ? "bg-cyan-600 hover:bg-cyan-500" : "bg-blue-600 hover:bg-blue-700"}`}
           >
             <Plus className="w-3.5 h-3.5" /> Nuevo Operario
           </button>
@@ -263,7 +263,7 @@ export function OperariosPanel() {
                   </td>
                   <td className={`px-3 py-2.5 ${textSecondary} hidden md:table-cell`}>{formatDate(op.fechaNacimiento)}</td>
                   <td className={`px-3 py-2.5`}>
-                    <span className={`px-2 py-0.5 rounded text-[11px] font-mono ${isDark ? "bg-cyan-500/10 text-cyan-400" : "bg-cyan-50 text-cyan-700"}`}>
+                    <span className={`px-2 py-0.5 rounded text-[11px] font-mono ${isDark ? "bg-cyan-500/10 text-cyan-400" : "bg-blue-600/10 text-blue-800"}`}>
                       {op.aeropuerto}
                     </span>
                   </td>
@@ -427,7 +427,7 @@ export function OperariosPanel() {
               </button>
               <button
                 onClick={handleSave}
-                className="px-4 py-1.5 rounded-lg text-[12px] bg-cyan-600 hover:bg-cyan-500 text-white transition-colors"
+                className={`px-4 py-1.5 rounded-lg text-[12px] text-white transition-colors ${isDark ? "bg-cyan-600 hover:bg-cyan-500" : "bg-blue-600 hover:bg-blue-700"}`}
               >
                 {modalMode === "create" ? "Registrar" : "Guardar Cambios"}
               </button>

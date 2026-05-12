@@ -122,7 +122,7 @@ export function FlightsPanel() {
   }`;
   const sortBtnCls = (active: boolean) => `flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] border transition-colors ${
     active
-      ? isDark ? "bg-cyan-500/15 border-cyan-500/30 text-cyan-400" : "bg-cyan-50 border-cyan-300 text-cyan-700"
+      ? (isDark ? "bg-cyan-500/15 border-cyan-500/30 text-cyan-400" : "bg-blue-600/10 border-blue-600/30 text-blue-700")
       : isDark ? "border-[#334155] text-[#94a3b8] hover:text-white" : "border-[#cbd5e1] text-[#64748b] hover:text-[#0f172a]"
   }`;
 
@@ -131,7 +131,7 @@ export function FlightsPanel() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <Plane className={`w-5 h-5 ${isDark ? "text-cyan-400" : "text-cyan-600"}`} />
+          <Plane className={`w-5 h-5 ${isDark ? "text-cyan-400" : "text-blue-700"}`} />
           <h1 className={`text-[20px] ${textPrimary}`}>Vuelos</h1>
           <span className={`text-[12px] px-2 py-0.5 rounded-full ${isDark ? "bg-[#1e293b] text-[#94a3b8]" : "bg-[#e2e8f0] text-[#64748b]"}`}>
             {state.flights.length} registrados
@@ -220,10 +220,10 @@ export function FlightsPanel() {
                 return (
                   <tr key={f.id} className={`border-t ${isDark ? "border-[#1e293b]" : "border-[#e2e8f0]"} ${f.cancelled ? "opacity-50" : rowHover} transition-colors`}>
                     <td className="px-3 py-2.5">
-                      <span className={`px-2 py-0.5 rounded text-[11px] font-mono ${isDark ? "bg-cyan-500/10 text-cyan-400" : "bg-cyan-50 text-cyan-700"}`}>{f.origin}</span>
+                      <span className={`px-2 py-0.5 rounded text-[11px] font-mono ${isDark ? "bg-cyan-500/10 text-cyan-400" : "bg-blue-600/10 text-blue-800"}`}>{f.origin}</span>
                     </td>
                     <td className="px-3 py-2.5">
-                      <span className={`px-2 py-0.5 rounded text-[11px] font-mono ${isDark ? "bg-cyan-500/10 text-cyan-400" : "bg-cyan-50 text-cyan-700"}`}>{f.destination}</span>
+                      <span className={`px-2 py-0.5 rounded text-[11px] font-mono ${isDark ? "bg-cyan-500/10 text-cyan-400" : "bg-blue-600/10 text-blue-800"}`}>{f.destination}</span>
                     </td>
                     <td className={`px-3 py-2.5 ${textSecondary} hidden md:table-cell font-mono text-[11px]`}>{formatFlightDateTime(f.departureHour)}</td>
                     <td className={`px-3 py-2.5 ${textSecondary} hidden md:table-cell font-mono text-[11px]`}>{formatFlightDateTime(arrivalHour)}</td>
@@ -282,8 +282,8 @@ export function FlightsPanel() {
       <div className={`border rounded-xl overflow-hidden ${cardBg}`}>
         <div className={`px-5 py-4 border-b ${isDark ? "border-[#1e293b]" : "border-[#e2e8f0]"}`}>
           <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isDark ? "bg-cyan-500/10" : "bg-cyan-50"}`}>
-              <Upload className={`w-5 h-5 ${isDark ? "text-cyan-400" : "text-cyan-600"}`} />
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isDark ? "bg-cyan-500/10" : "bg-blue-600/10"}`}>
+              <Upload className={`w-5 h-5 ${isDark ? "text-cyan-400" : "text-blue-700"}`} />
             </div>
             <div>
               <h3 className={`text-[14px] ${textPrimary}`}>Importación de Vuelos en Lote</h3>
@@ -296,7 +296,7 @@ export function FlightsPanel() {
             <div className="flex-1 space-y-3">
               <div className={`text-[12px] ${textSecondary}`}>
                 <p className="mb-2">Cada línea debe seguir el formato separado por guiones:</p>
-                <div className={`rounded-lg p-3 font-mono text-[11px] ${isDark ? "bg-[#1e293b] text-cyan-300" : "bg-[#f1f5f9] text-cyan-700"}`}>
+                <div className={`rounded-lg p-3 font-mono text-[11px] ${isDark ? "bg-[#1e293b] text-cyan-300" : "bg-[#f1f5f9] text-blue-800"}`}>
                   Origen-Destino-HoraSalida-HoraLlegada-Duración<br />
                   <span className={isDark ? "text-white/40" : "text-[#94a3b8]"}>Ejemplo: </span>SKBO-SEQM-03:34-05:21-0300
                 </div>
@@ -322,7 +322,7 @@ export function FlightsPanel() {
                 className={`flex items-center gap-2 px-5 py-3 rounded-xl text-[13px] transition-all ${
                   isDark
                     ? "bg-gradient-to-r from-cyan-600/20 to-cyan-500/10 border border-cyan-500/30 text-cyan-400 hover:from-cyan-600/30 hover:to-cyan-500/20"
-                    : "bg-gradient-to-r from-cyan-50 to-cyan-100 border border-cyan-200 text-cyan-700 hover:from-cyan-100 hover:to-cyan-200"
+                    : "bg-gradient-to-r from-blue-600/20 to-blue-500/10 border border-blue-500/30 text-blue-700 hover:from-blue-600/30 hover:to-blue-500/20"
                 }`}>
                 <Upload className="w-4 h-4" /> Seleccionar Archivo
               </button>

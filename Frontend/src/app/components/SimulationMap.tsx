@@ -100,7 +100,7 @@ export function SimulationMap({ onSelectBaggage, selectedBaggage }: SimMapProps)
   const legendTitle = isDark ? "text-white" : "text-[#111827]";
   const legendDivider = isDark ? "border-[#1a2744]" : "border-[#b0c4d8]";
   const tooltipBg  = isDark ? "bg-[#0a0f1ef0] border-[#1a2744]" : "bg-white/95 border-[#b0c4d8]";
-  const tooltipTitle = isDark ? "text-cyan-400" : "text-cyan-600";
+  const tooltipTitle = isDark ? "text-cyan-400" : "text-blue-700";
   const tooltipSub = isDark ? "text-white/70" : "text-[#374151]";
   const tooltipVal = isDark ? "text-white" : "text-[#111827]";
   const labelFill  = isDark ? "#fff" : "#1e3a5f";
@@ -198,11 +198,13 @@ export function SimulationMap({ onSelectBaggage, selectedBaggage }: SimMapProps)
     // De-duplicate planes that share the same flightId and progress
     const uniquePlanes = Array.from(new Map(activePlanes.map((p) => [p.flightId, p])).values());
 
+    const activeRouteColor = isDark ? "#00e5ff" : "#1e3a8a";
+
     for (const [key, val] of Array.from(activeRoutesMap.entries())) {
       arcs.push({
         from: [val.from.lng, val.from.lat],
         to: [val.to.lng, val.to.lat],
-        color: "#00e5ff",
+        color: activeRouteColor,
         strokeWidth: 1 + Math.min(2, val.qty / 100),
         isActive: true,
         key: `act-${key}`,
@@ -210,7 +212,7 @@ export function SimulationMap({ onSelectBaggage, selectedBaggage }: SimMapProps)
     }
 
     return { arcsData: arcs, planesData: uniquePlanes };
-  }, [state.baggageGroups, state.currentTime, state.flights, selectedBaggage]);
+  }, [state.baggageGroups, state.currentTime, state.flights, selectedBaggage, isDark]);
 
   return (
     <div className="w-full h-full rounded-xl overflow-hidden relative transition-colors duration-200" style={{ background: mapBg }}>
@@ -297,8 +299,8 @@ export function SimulationMap({ onSelectBaggage, selectedBaggage }: SimMapProps)
                 <g transform={`rotate(${plane.heading})`}>
                   <path
                     d="M0,-8 C0.8,-7.5 1.2,-6 1.2,-4 L1.2,-1.5 L7,3 L7,4.2 L1.2,1.5 L1.2,4.5 L3.2,6.2 L3.2,7.2 L0,6 L-3.2,7.2 L-3.2,6.2 L-1.2,4.5 L-1.2,1.5 L-7,4.2 L-7,3 L-1.2,-1.5 L-1.2,-4 C-1.2,-6 -0.8,-7.5 0,-8 Z"
-                    fill="#00e5ff"
-                    stroke="#007fa3"
+                    fill={isDark ? "#00e5ff" : "#1e3a8a"}
+                    stroke={isDark ? "#007fa3" : "#1e3a8a"}
                     strokeWidth={0.35}
                     strokeLinejoin="round"
                   />
