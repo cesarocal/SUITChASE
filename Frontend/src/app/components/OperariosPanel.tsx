@@ -1,52 +1,10 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useTheme } from "../context/ThemeContext";
-import { AIRPORTS } from "../data/airports";
 import {
   Search, Plus, Pencil, Trash2, X, ChevronLeft, ChevronRight,
   Eye, EyeOff, AlertTriangle, Users
 } from "lucide-react";
-
-export interface Operario {
-  id: string;
-  dni: string;
-  nombre: string;
-  correo: string;
-  password: string;
-  telefono: string;
-  genero: "Masculino" | "Femenino" | "Otro";
-  fechaNacimiento: string; // yyyy-mm-dd
-  aeropuerto: string; // airport code
-}
-
-const STORAGE_KEY = "suitchase_operarios";
-
-function loadOperarios(): Operario[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : getInitialOperarios();
-  } catch {
-    return getInitialOperarios();
-  }
-}
-
-function saveOperarios(ops: Operario[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(ops));
-}
-
-function getInitialOperarios(): Operario[] {
-  return [
-    { id: "op-001", dni: "70123456", nombre: "Carlos Mendoza", correo: "cmendoza@tasf.b2b", password: "operario", telefono: "+51 987 654 321", genero: "Masculino", fechaNacimiento: "1992-05-14", aeropuerto: "LIM" },
-    { id: "op-002", dni: "70234567", nombre: "María García", correo: "mgarcia@tasf.b2b", password: "operario", telefono: "+54 911 234 5678", genero: "Femenino", fechaNacimiento: "1988-11-22", aeropuerto: "EZE" },
-    { id: "op-003", dni: "70345678", nombre: "Ana Torres", correo: "atorres@tasf.b2b", password: "operario", telefono: "+55 11 98765 4321", genero: "Femenino", fechaNacimiento: "1995-03-08", aeropuerto: "GRU" },
-    { id: "op-004", dni: "70456789", nombre: "Luis Fernández", correo: "lfernandez@tasf.b2b", password: "operario", telefono: "+34 612 345 678", genero: "Masculino", fechaNacimiento: "1990-07-30", aeropuerto: "MAD" },
-    { id: "op-005", dni: "70567890", nombre: "Yuki Tanaka", correo: "ytanaka@tasf.b2b", password: "operario", telefono: "+81 90 1234 5678", genero: "Femenino", fechaNacimiento: "1993-01-17", aeropuerto: "NRT" },
-    { id: "op-006", dni: "70678901", nombre: "Roberto Díaz", correo: "rdiaz@tasf.b2b", password: "operario", telefono: "+52 55 1234 5678", genero: "Masculino", fechaNacimiento: "1987-09-05", aeropuerto: "MEX" },
-  ];
-}
-
-function genId() {
-  return "op-" + Math.random().toString(36).slice(2, 9);
-}
+import { api } from "../services/api";
 
 const ROWS_PER_PAGE = 8;
 
@@ -70,44 +28,57 @@ const emptyForm: FormData = {
 
 export function OperariosPanel() {
   const { isDark } = useTheme();
-  const [operarios, setOperarios] = useState<Operario[]>(loadOperarios);
+  const [operarios, setOperarios] = useState<any[]>([]);
+  const [airports, setAirports] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
   const [modalMode, setModalMode] = useState<ModalMode>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<FormData>(emptyForm);
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
-  const [deleteConfirm, setDeleteConfirm] = useState<Operario | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<any | null>(null);
 
-  const persist = (next: Operario[]) => { setOperarios(next); saveOperarios(next); };
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [ops, aps] = await Promise.all([
+        api.getOperarios(),
+        api.getAirports()
+      ]);
+      setOperarios(ops);
+      setAirports(aps);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filtered = useMemo(() => {
     if (!search.trim()) return operarios;
     const q = search.toLowerCase();
     return operarios.filter(o =>
-      o.dni.toLowerCase().includes(q) ||
-      o.nombre.toLowerCase().includes(q) ||
-      o.correo.toLowerCase().includes(q) ||
-      o.aeropuerto.toLowerCase().includes(q)
+      (o.dni?.toLowerCase().includes(q)) ||
+      (o.nombreCompleto?.toLowerCase().includes(q)) ||
+      (o.correo?.toLowerCase().includes(q)) ||
+      (o.aeropuertoOaci?.toLowerCase().includes(q))
     );
   }, [operarios, search]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / ROWS_PER_PAGE));
   const pageData = filtered.slice(page * ROWS_PER_PAGE, (page + 1) * ROWS_PER_PAGE);
 
-  // Validation
   const validate = (): boolean => {
     const e: Partial<Record<keyof FormData, string>> = {};
     if (!form.dni.trim()) e.dni = "DNI es requerido";
-    else if (!/^\d{7,12}$/.test(form.dni.trim())) e.dni = "DNI debe tener 7–12 dígitos";
-    else {
-      const dup = operarios.find(o => o.dni === form.dni.trim() && o.id !== editingId);
-      if (dup) e.dni = "Este DNI ya está registrado";
-    }
     if (!form.nombre.trim()) e.nombre = "Nombre es requerido";
     if (!form.correo.trim()) e.correo = "Correo es requerido";
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.correo.trim())) e.correo = "Correo inválido";
     if (modalMode === "create" && !form.password.trim()) e.password = "Contraseña es requerida";
     if (!form.telefono.trim()) e.telefono = "Teléfono es requerido";
     if (!form.fechaNacimiento) e.fechaNacimiento = "Fecha de nacimiento es requerida";
@@ -124,11 +95,16 @@ export function OperariosPanel() {
     setModalMode("create");
   };
 
-  const openEdit = (op: Operario) => {
+  const openEdit = (op: any) => {
     setForm({
-      dni: op.dni, nombre: op.nombre, correo: op.correo,
-      password: "", telefono: op.telefono, genero: op.genero,
-      fechaNacimiento: op.fechaNacimiento, aeropuerto: op.aeropuerto,
+      dni: op.dni || "",
+      nombre: op.nombreCompleto || "",
+      correo: op.correo || "",
+      password: "",
+      telefono: op.telefono || "",
+      genero: op.genero || "Masculino",
+      fechaNacimiento: op.fechaNacimiento || "",
+      aeropuerto: op.aeropuertoOaci || "",
     });
     setEditingId(op.id);
     setErrors({});
@@ -136,28 +112,44 @@ export function OperariosPanel() {
     setModalMode("edit");
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!validate()) return;
-    if (modalMode === "create") {
-      const newOp: Operario = { id: genId(), ...form, dni: form.dni.trim(), nombre: form.nombre.trim(), correo: form.correo.trim(), telefono: form.telefono.trim() };
-      persist([...operarios, newOp]);
-    } else if (modalMode === "edit" && editingId) {
-      persist(operarios.map(o => o.id === editingId ? {
-        ...o,
-        dni: form.dni.trim(), nombre: form.nombre.trim(), correo: form.correo.trim(),
-        telefono: form.telefono.trim(), genero: form.genero,
-        fechaNacimiento: form.fechaNacimiento, aeropuerto: form.aeropuerto,
-        ...(form.password.trim() ? { password: form.password.trim() } : {}),
-      } : o));
+    const payload = {
+      username: form.correo.split("@")[0], // generated username
+      nombreCompleto: form.nombre.trim(),
+      dni: form.dni.trim(),
+      correo: form.correo.trim(),
+      telefono: form.telefono.trim(),
+      genero: form.genero,
+      fechaNacimiento: form.fechaNacimiento,
+      aeropuertoOaci: form.aeropuerto,
+      passwordHash: form.password.trim() || undefined,
+      activo: true
+    };
+
+    try {
+      if (modalMode === "create") {
+        await api.createOperario(payload);
+      } else if (modalMode === "edit" && editingId) {
+        await api.updateOperario(editingId, payload);
+      }
+      setModalMode(null);
+      fetchData();
+    } catch (err: any) {
+      alert(err.message);
     }
-    setModalMode(null);
   };
 
-  const handleDelete = (op: Operario) => { setDeleteConfirm(op); };
-  const confirmDelete = () => {
+  const handleDelete = (op: any) => { setDeleteConfirm(op); };
+  const confirmDelete = async () => {
     if (!deleteConfirm) return;
-    persist(operarios.filter(o => o.id !== deleteConfirm.id));
-    setDeleteConfirm(null);
+    try {
+      await api.deleteOperario(deleteConfirm.id);
+      setDeleteConfirm(null);
+      fetchData();
+    } catch (err: any) {
+      alert(err.message);
+    }
   };
 
   const formatDate = (d: string) => {
@@ -247,7 +239,7 @@ export function OperariosPanel() {
               ) : pageData.map(op => (
                 <tr key={op.id} className={`border-t ${isDark ? "border-[#1e293b]" : "border-[#e2e8f0]"} ${rowHover} transition-colors`}>
                   <td className={`px-3 py-2.5 ${textPrimary} font-mono`}>{op.dni}</td>
-                  <td className={`px-3 py-2.5 ${textPrimary}`}>{op.nombre}</td>
+                  <td className={`px-3 py-2.5 ${textPrimary}`}>{op.nombreCompleto}</td>
                   <td className={`px-3 py-2.5 ${textSecondary} hidden md:table-cell`}>{op.correo}</td>
                   <td className={`px-3 py-2.5 ${textSecondary} hidden lg:table-cell`}>{op.telefono}</td>
                   <td className={`px-3 py-2.5 hidden lg:table-cell`}>
@@ -264,7 +256,7 @@ export function OperariosPanel() {
                   <td className={`px-3 py-2.5 ${textSecondary} hidden md:table-cell`}>{formatDate(op.fechaNacimiento)}</td>
                   <td className={`px-3 py-2.5`}>
                     <span className={`px-2 py-0.5 rounded text-[11px] font-mono ${isDark ? "bg-cyan-500/10 text-cyan-400" : "bg-blue-600/10 text-blue-800"}`}>
-                      {op.aeropuerto}
+                      {op.aeropuertoOaci}
                     </span>
                   </td>
                   <td className="px-3 py-2.5">
@@ -407,8 +399,8 @@ export function OperariosPanel() {
                     className={inputCls}
                   >
                     <option value="">Seleccionar...</option>
-                    {AIRPORTS.map(a => (
-                      <option key={a.code} value={a.code}>{a.city} ({a.code})</option>
+                    {airports.map(a => (
+                      <option key={a.oaci} value={a.oaci}>{a.ciudad} ({a.oaci})</option>
                     ))}
                   </select>
                   {errors.aeropuerto && <p className={errorCls}>{errors.aeropuerto}</p>}

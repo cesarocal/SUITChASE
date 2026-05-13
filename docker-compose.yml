@@ -1,0 +1,67 @@
+# =====================================================
+# Docker Compose — SUITChASE (Backend + Frontend)
+# =====================================================
+# El servidor de MySQL y Nginx ya están instalados
+# nativamente en Ubuntu 24.04, así que solo se
+# conteneriza el Backend (Spring Boot) y el Frontend
+# (React/Vite servido con Nginx interno).
+#
+# USO:
+#   docker compose up -d --build
+#   docker compose down
+#   docker compose logs -f backend
+# =====================================================
+
+services:
+  # ============================================
+  # Backend — Spring Boot (JDK 21)
+  # ============================================
+  backend:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+    container_name: suitchase-backend
+    restart: unless-stopped
+    ports:
+      - "8090:8090"
+    environment:
+      # Sobreescribir las propiedades de Spring Boot
+      SPRING_DATASOURCE_URL: jdbc:mysql://host.docker.internal:3306/suitchase?useSSL=false&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:-root}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-}
+      JAVA_OPTS: "-XX:+UseG1GC -XX:MaxGCPauseMillis=200"
+    extra_hosts:
+      # Permite que el contenedor acceda al MySQL nativo del host
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8090/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - suitchase-net
+
+  # ============================================
+  # Frontend — React/Vite servido con Nginx
+  # ============================================
+  frontend:
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile
+    container_name: suitchase-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    networks:
+      - suitchase-net
+
+networks:
+  suitchase-net:
+    driver: bridge

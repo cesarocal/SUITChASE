@@ -25,3 +25,36 @@ reporte_*.txt
 # ========================
 .DS_Store
 Thumbs.db
+desktop.ini
+
+# ========================
+# IDEs
+# ========================
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+.factorypath
+
+# ========================
+# Docker
+# ========================
+.env
+
+# ========================
+# Maven
+# ========================
+Backend/.mvn/wrapper/maven-wrapper.jar
+
+# ========================
+# Datos locales del Planificador
+# ========================
+Planificador/*.class
+Planificador/log_*.txt
+Planificador/reporte_*.txt
+Planificador/_envios_preliminar_/

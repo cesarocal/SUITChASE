@@ -1,0 +1,13 @@
+# Archivos innecesarios para la imagen Docker
+node_modules/
+dist/
+.vite/
+.git/
+.gitignore
+README.md
+Dockerfile
+.dockerignore
+guidelines/
+default_shadcn_theme.css
+ATTRIBUTIONS.md
+pnpm-workspace.yaml

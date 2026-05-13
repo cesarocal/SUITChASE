@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import { useSim } from "../context/SimContext";
 import { useTheme } from "../context/ThemeContext";
 import {
@@ -7,6 +7,7 @@ import {
   ArrowUpDown, Trash2
 } from "lucide-react";
 import { toast } from "sonner";
+import { api } from "../services/api";
 
 const SIM_BASE_DATE = new Date(2026, 3, 2, 0, 0, 0);
 const ROWS_PER_PAGE = 12;
@@ -28,6 +29,8 @@ function formatFlightDateTime(departureHour: number): string {
 export function FlightsPanel() {
   const { state, cancelFlight, clearFlights, airportsList, batchImportFlights } = useSim();
   const { isDark } = useTheme();
+  const [flightsList, setFlightsList] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterOrigin, setFilterOrigin] = useState("all");
   const [filterType, setFilterType] = useState("all");
@@ -38,6 +41,23 @@ export function FlightsPanel() {
   const [confirmClearAll, setConfirmClearAll] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const [importResult, setImportResult] = useState<{ count: number; visible: boolean } | null>(null);
+
+  useEffect(() => {
+    fetchFlights();
+  }, []);
+
+  const fetchFlights = async () => {
+    setLoading(true);
+    try {
+      const data = await api.getFlights();
+      // Map backend to frontend format if needed, but assuming they match enough or we fix usage
+      setFlightsList(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -55,7 +75,7 @@ export function FlightsPanel() {
   };
 
   const filtered = useMemo(() => {
-    let list = state.flights;
+    let list = flightsList;
 
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -82,7 +102,7 @@ export function FlightsPanel() {
     }
 
     return list;
-  }, [state.flights, search, filterOrigin, filterType, filterStatus, sortField]);
+  }, [flightsList, search, filterOrigin, filterType, filterStatus, sortField]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / ROWS_PER_PAGE));
   const pageData = filtered.slice(page * ROWS_PER_PAGE, (page + 1) * ROWS_PER_PAGE);

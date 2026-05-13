@@ -2,11 +2,12 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router";
 import { Briefcase, LogIn, Eye, EyeOff } from "lucide-react";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
+import { api } from "../services/api";
 
-const USERS: Record<string, { password: string; redirect: string }> = {
-  admin:     { password: "admin",     redirect: "/" },
-  operario:  { password: "operario",  redirect: "/operario" },
-  aerolinea: { password: "aerolinea", redirect: "/aerolinea" },
+const USERS_REDIRECT: Record<string, string> = {
+  ADMIN:     "/",
+  OPERARIO:  "/operario",
+  AEROLINEA: "/aerolinea",
 };
 
 export function LoginPage() {
@@ -15,16 +16,22 @@ export function LoginPage() {
   const [pass, setPass] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const entry = USERS[user.toLowerCase().trim()];
-    if (!entry || entry.password !== pass) {
-      setError("Usuario o contraseña incorrectos");
-      return;
+    setLoading(true);
+    setError("");
+    
+    try {
+      const res = await api.login(user.trim(), pass);
+      const redirect = USERS_REDIRECT[res.role] || "/";
+      navigate(redirect);
+    } catch (err: any) {
+      setError(err.message || "Usuario o contraseña incorrectos");
+    } finally {
+      setLoading(false);
     }
-    localStorage.setItem("suitchase_role", user.toLowerCase().trim());
-    navigate(entry.redirect);
   };
 
   return (

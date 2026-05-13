@@ -42,7 +42,7 @@ public class DataMapperService {
         envio.setDestinoOaci(entity.getDestinoOaci());
         envio.setFechaHoraRegistro(entity.getFechaHoraRegistro());
         envio.setCantidadMaletas(entity.getCantidadMaletas());
-        envio.setClienteId(entity.getClienteId() != null ? entity.getClienteId() : "UNK");
+        envio.setClienteId(entity.getAerolineaId() != null ? String.valueOf(entity.getAerolineaId()) : "UNK");
         return envio;
     }
 }

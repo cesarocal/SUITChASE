@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import { useSim } from "../context/SimContext";
 import { useTheme } from "../context/ThemeContext";
 import type { Airport } from "../data/airports";
@@ -6,10 +6,9 @@ import {
   Search, Plus, Pencil, Trash2, X, ChevronLeft, ChevronRight,
   AlertTriangle, Warehouse, Upload, FileText, CheckCircle2, MapPin, Clock, Globe
 } from "lucide-react";
+import { api } from "../services/api";
 
-const STORAGE_KEY = "suitchase_airports";
 const ROWS_PER_PAGE = 10;
-
 type ModalMode = "create" | "edit" | null;
 
 interface FormData {
@@ -53,8 +52,10 @@ function getStatusBadge(pct: number, isDark: boolean) {
 }
 
 export function AirportsPanel() {
-  const { state, airportsList, addAirport, updateAirport, deleteAirport, batchImportAirports } = useSim();
+  const { state, addAirport, updateAirport, deleteAirport, batchImportAirports } = useSim();
   const { isDark } = useTheme();
+  const [airportsList, setAirportsList] = useState<Airport[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
   const [modalMode, setModalMode] = useState<ModalMode>(null);
@@ -65,6 +66,34 @@ export function AirportsPanel() {
   const [filterContinent, setFilterContinent] = useState<string>("all");
   const fileRef = useRef<HTMLInputElement>(null);
   const [importResult, setImportResult] = useState<{ count: number; visible: boolean } | null>(null);
+
+  useEffect(() => {
+    fetchAirports();
+  }, []);
+
+  const fetchAirports = async () => {
+    setLoading(true);
+    try {
+      const data = await api.getAirports();
+      // Map backend entity to frontend Airport interface
+      const mapped = data.map((a: any) => ({
+        code: a.oaci,
+        city: a.ciudad,
+        country: a.pais,
+        continent: a.continente === "Europe" ? "Europa" : (a.continente || "America"),
+        timezone: a.gmt >= 0 ? `UTC+${a.gmt}` : `UTC${a.gmt}`,
+        lat: a.latitud,
+        lng: a.longitud,
+        warehouseCapacity: a.capacidadAlmacen,
+        currentStock: a.stockActual || 0
+      }));
+      setAirportsList(mapped);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filtered = useMemo(() => {
     let list = airportsList;
@@ -139,51 +168,51 @@ export function AirportsPanel() {
     setModalMode("edit");
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!validate()) return;
     const lat = parseFloat(form.lat);
     const lng = parseFloat(form.lng);
     const cap = parseInt(form.capacity);
-    if (modalMode === "create") {
-      const newAirport: Airport = {
-        code: form.code.trim().toUpperCase(),
-        city: form.city.trim(),
-        country: form.country.trim(),
-        continent: form.continent,
-        timezone: form.timezone,
-        lat, lng,
-        warehouseCapacity: cap,
-        currentStock: 0,
-      };
-      addAirport(newAirport);
-    } else if (modalMode === "edit" && editCode) {
-      updateAirport(editCode, {
-        city: form.city.trim(),
-        country: form.country.trim(),
-        continent: form.continent,
-        timezone: form.timezone,
-        lat, lng,
-        warehouseCapacity: cap,
-      });
+    const gmtStr = form.timezone.replace("UTC", "");
+    const gmt = parseInt(gmtStr) || 0;
+
+    const payload = {
+      oaci: form.code.trim().toUpperCase(),
+      ciudad: form.city.trim(),
+      pais: form.country.trim(),
+      continente: form.continent === "Europa" ? "Europe" : form.continent,
+      gmt: gmt,
+      capacidadAlmacen: cap,
+      latitud: lat,
+      longitud: lng
+    };
+
+    try {
+      if (modalMode === "create") {
+        await api.createAirport(payload);
+      } else if (modalMode === "edit" && editCode) {
+        await api.updateAirport(editCode, payload);
+      }
+      setModalMode(null);
+      fetchAirports();
+    } catch (err: any) {
+      alert(err.message);
     }
-    setModalMode(null);
   };
 
   const handleDelete = (a: Airport) => {
-    if (state.baggageGroups.some(bg =>
-      (bg.status === "waiting" || bg.status === "in_transit") &&
-      (bg.origin === a.code || bg.destination === a.code)
-    )) {
-      setDeleteConfirm(null);
-      return;
-    }
     setDeleteConfirm(a);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!deleteConfirm) return;
-    deleteAirport(deleteConfirm.code);
-    setDeleteConfirm(null);
+    try {
+      await api.deleteAirport(deleteConfirm.code);
+      setDeleteConfirm(null);
+      fetchAirports();
+    } catch (err: any) {
+      alert(err.message);
+    }
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {

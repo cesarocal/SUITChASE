@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useSim } from "../context/SimContext";
 import { useTheme } from "../context/ThemeContext";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
@@ -10,10 +10,17 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { ScrollArea } from "./ui/scroll-area";
 import { Package, Plus, Search, Upload, FileText, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
+import { api } from "../services/api";
 
 export function Registration({ showBatchImport = true }: { showBatchImport?: boolean }) {
-  const { state, registerBaggage, batchImportBaggage, airportsList, airlines } = useSim();
+  const { state, registerBaggage, batchImportBaggage } = useSim();
   const { isDark } = useTheme();
+  
+  const [airportsList, setAirportsList] = useState<any[]>([]);
+  const [airlines, setAirlines] = useState<any[]>([]);
+  const [baggageGroups, setBaggageGroups] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const [origin, setOrigin] = useState("");
   const [destination, setDestination] = useState("");
   const [quantity, setQuantity] = useState("1");
@@ -26,7 +33,7 @@ export function Registration({ showBatchImport = true }: { showBatchImport?: boo
   const airlineRef = useRef<HTMLDivElement>(null);
 
   // Close airline dropdown on outside click
-  React.useEffect(() => {
+  useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (airlineRef.current && !airlineRef.current.contains(e.target as Node)) {
         setAirlineOpen(false);
@@ -37,8 +44,8 @@ export function Registration({ showBatchImport = true }: { showBatchImport?: boo
   }, []);
 
   const filteredAirlines = airlines.filter(a =>
-    a.name.toLowerCase().includes(airlineSearch.toLowerCase()) ||
-    a.code.toLowerCase().includes(airlineSearch.toLowerCase())
+    a.nombre.toLowerCase().includes(airlineSearch.toLowerCase()) ||
+    a.codigo.toLowerCase().includes(airlineSearch.toLowerCase())
   );
 
   // Theme classes
@@ -60,7 +67,33 @@ export function Registration({ showBatchImport = true }: { showBatchImport?: boo
   const dropdownBorder = isDark ? "border-[#334155]" : "border-[#cbd5e1]";
   const dropdownHover = isDark ? "hover:bg-[#334155]" : "hover:bg-[#f1f5f9]";
 
-  const handleRegister = () => {
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [aps, als, envs] = await Promise.all([
+        api.getAirports(),
+        // We don't have a getAirlines yet, let's assume api has it or we can list from somewhere
+        // For now let's use mock airlines if endpoint missing, or assume it exists
+        fetch("http://localhost:8090/api/aerolineas", {
+           headers: { "Authorization": `Bearer ${localStorage.getItem("suitchase_token")}` }
+        }).then(r => r.json()).catch(() => []),
+        api.getEnvios()
+      ]);
+      setAirportsList(aps.map((a: any) => ({ code: a.oaci, city: a.ciudad })));
+      setAirlines(als);
+      setBaggageGroups(envs);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRegister = async () => {
     if (!origin || !destination || !airline || origin === destination) {
       toast.error("Complete todos los campos. Origen y destino deben ser diferentes.");
       return;
@@ -70,9 +103,21 @@ export function Registration({ showBatchImport = true }: { showBatchImport?: boo
       toast.error("Cantidad inválida.");
       return;
     }
-    registerBaggage(origin, destination, qty, airline);
-    toast.success(`${qty} maletas registradas: ${origin} → ${destination}`);
-    setQuantity("1");
+
+    try {
+      const al = airlines.find(a => a.nombre === airline);
+      await api.registrarEnvio({
+        codigoOrigen: origin,
+        codigoDestino: destination,
+        cantidadMaletas: qty,
+        aerolineaId: al?.id
+      });
+      toast.success(`${qty} maletas registradas: ${origin} → ${destination}`);
+      setQuantity("1");
+      fetchData(); // Refresh list
+    } catch (err: any) {
+      toast.error(err.message || "Error al registrar");
+    }
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -1,0 +1,16 @@
+# Archivos innecesarios para la imagen Docker
+target/
+*.class
+*.jar
+*.log
+*.txt.log
+log_*.txt
+reporte_*.txt
+.idea/
+*.iml
+.vscode/
+.git/
+.gitignore
+README.md
+Dockerfile
+.dockerignore

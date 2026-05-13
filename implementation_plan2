@@ -1,0 +1,410 @@
+# Arquitectura Completa: Seguridad, Tiempo Real y Simulación
+
+## Contexto
+
+SUITChASE necesita soportar:
+
+1. **Tiempo Real** — Operarios registran envíos en el sistema. El planificador los consume cada Ta segundos con el algoritmo ACS. Las aerolíneas consultan el estado de sus envíos en vivo.
+2. **Simulación** — Datos sintéticos en MySQL, consumidos por bloques de tamaño `Sc = K × Sa`. Se puede pausar y reanudar.
+3. **Seguridad** — Login con 3 roles: Administrador, Operario, Aerolínea. Cada uno con permisos distintos.
+
+---
+
+## Modelo Relacional Completo
+
+```mermaid
+erDiagram
+    usuario {
+        BIGINT id PK
+        VARCHAR username UK
+        VARCHAR password_hash
+        VARCHAR nombre_completo
+        VARCHAR rol "ADMIN | OPERARIO | AEROLINEA"
+        BIGINT aerolinea_id FK "Solo si rol=AEROLINEA"
+        BOOLEAN activo
+        DATETIME created_at
+    }
+
+    aerolinea {
+        BIGINT id PK
+        VARCHAR nombre UK
+        VARCHAR codigo UK "Ej: LAN, AVA, IB"
+    }
+
+    aeropuerto {
+        VARCHAR oaci PK "Ej: SPJC, KJFK"
+        VARCHAR ciudad
+        VARCHAR pais
+        VARCHAR continente
+        INT gmt
+        INT capacidad_almacen
+        DOUBLE latitud
+        DOUBLE longitud
+    }
+
+    vuelo {
+        BIGINT id PK
+        VARCHAR origen_oaci FK
+        VARCHAR destino_oaci FK
+        TIME hora_salida
+        TIME hora_llegada
+        INT capacidad
+    }
+
+    envio {
+        VARCHAR id PK
+        VARCHAR origen_oaci FK
+        VARCHAR destino_oaci FK
+        DATETIME fecha_hora_registro
+        INT cantidad_maletas
+        BIGINT aerolinea_id FK "Quién solicita el envío"
+        BIGINT operario_id FK "NULL si es sintético"
+        BOOLEAN es_sintetico
+        VARCHAR estado "PENDIENTE EN_RUTA ENTREGADO COLAPSO SIN_RUTA"
+        BIGINT simulacion_id FK "NULL si es tiempo real"
+    }
+
+    simulacion {
+        BIGINT id PK
+        VARCHAR nombre
+        VARCHAR estado "PENDIENTE EJECUTANDO PAUSADA FINALIZADA CANCELADA"
+        DATETIME fecha_inicio_sim
+        DATETIME fecha_fin_sim
+        INT salto_algoritmo_sa
+        INT constante_k
+        INT tiempo_algoritmo_ta
+        INT bloque_actual
+        INT total_bloques_estimados
+        DATETIME cursor_temporal
+        BIGINT creado_por FK "usuario.id del admin"
+        DATETIME created_at
+        DATETIME updated_at
+    }
+
+    bloque_resultado {
+        BIGINT id PK
+        BIGINT simulacion_id FK
+        INT numero_bloque
+        DATETIME inicio_ventana
+        DATETIME fin_ventana
+        INT total_envios
+        INT envios_con_ruta
+        INT envios_sin_ruta
+        DOUBLE promedio_sla
+        DOUBLE ocupacion_vuelos
+        DOUBLE ocupacion_almacenes
+        LONG duracion_ms
+        DATETIME created_at
+    }
+
+    asignacion_envio {
+        BIGINT id PK
+        BIGINT bloque_resultado_id FK "NULL si es tiempo real"
+        VARCHAR envio_id FK
+        INT orden_vuelo
+        BIGINT vuelo_id FK
+        DATETIME fecha_salida
+        DATETIME fecha_llegada
+        VARCHAR estado "A_TIEMPO COLAPSO SIN_RUTA"
+    }
+
+    aerolinea ||--o{ usuario : "tiene usuarios"
+    aerolinea ||--o{ envio : "solicita"
+    usuario ||--o{ envio : "registra (operario)"
+    usuario ||--o{ simulacion : "crea (admin)"
+    aeropuerto ||--o{ vuelo : "origen"
+    aeropuerto ||--o{ vuelo : "destino"
+    aeropuerto ||--o{ envio : "origen"
+    aeropuerto ||--o{ envio : "destino"
+    simulacion ||--o{ envio : "contiene (sintéticos)"
+    simulacion ||--o{ bloque_resultado : "produce"
+    bloque_resultado ||--o{ asignacion_envio : "contiene"
+    envio ||--o{ asignacion_envio : "tiene ruta"
+    vuelo ||--o{ asignacion_envio : "usado en"
+```
+
+### Resumen de Tablas
+
+| Tabla | Propósito | Registros estimados |
+|:---|:---|:---|
+| `usuario` | Login y roles | Decenas |
+| `aerolinea` | Empresas que solicitan envíos | Decenas |
+| `aeropuerto` | Nodos de la red de vuelos | ~200 |
+| `vuelo` | Planes de vuelo (cíclicos, se repiten diario) | ~700 |
+| `envio` | Cada solicitud de envío de maletas | Miles a cientos de miles |
+| `simulacion` | Configuración de cada simulación | Decenas |
+| `bloque_resultado` | Métricas por bloque procesado | Cientos |
+| `asignacion_envio` | Tramos de ruta asignados a cada envío | Miles a cientos de miles |
+
+---
+
+## Spring Security — Roles y Permisos
+
+### Estrategia: JWT (JSON Web Tokens)
+- El usuario se autentica con `POST /api/auth/login` (username + password)
+- Recibe un JWT que incluye su rol y `aerolinea_id` (si aplica)
+- Cada request subsiguiente incluye el JWT en el header `Authorization: Bearer <token>`
+- Spring Security valida el token y extrae el rol para autorizar
+
+### Matriz de Permisos
+
+| Endpoint | ADMIN | OPERARIO | AEROLINEA |
+|:---|:---:|:---:|:---:|
+| `POST /api/auth/login` | ✅ | ✅ | ✅ |
+| **Envíos** | | | |
+| `POST /api/envios` (registrar) | ✅ | ✅ | ❌ |
+| `GET /api/envios` (todos) | ✅ | ❌ | ❌ |
+| `GET /api/envios/mis-envios` (propios) | ❌ | ❌ | ✅ |
+| `GET /api/envios/{id}/ruta` | ✅ | ✅ | ✅ (solo propios) |
+| **Simulación** | | | |
+| `POST /api/simulacion/iniciar` | ✅ | ❌ | ❌ |
+| `POST /api/simulacion/{id}/pausar` | ✅ | ❌ | ❌ |
+| `POST /api/simulacion/{id}/reanudar` | ✅ | ❌ | ❌ |
+| `GET /api/simulacion/{id}` | ✅ | ❌ | ❌ |
+| `GET /api/simulacion/{id}/bloques` | ✅ | ❌ | ❌ |
+| **Datos** | | | |
+| `GET /api/aeropuertos` | ✅ | ✅ | ✅ |
+| `POST /api/datos-sinteticos/generar` | ✅ | ❌ | ❌ |
+| **Usuarios** | | | |
+| `POST /api/usuarios` (crear) | ✅ | ❌ | ❌ |
+| `GET /api/usuarios` | ✅ | ❌ | ❌ |
+| **WebSocket** | | | |
+| `/topic/simulacion/{id}` | ✅ | ❌ | ❌ |
+| `/topic/tiempo-real` | ✅ | ✅ | ❌ |
+| `/topic/mis-envios/{aerolineaId}` | ❌ | ❌ | ✅ |
+
+### Flujo de Registro de Envío (Operario → Tiempo Real)
+
+```mermaid
+sequenceDiagram
+    participant OP as Operario (Frontend)
+    participant AUTH as Spring Security
+    participant API as EnvioController
+    participant DB as MySQL
+    participant SCHED as Scheduler (cada Ta seg)
+    participant ACS as ACSAdapter
+    participant WS as WebSocket
+    participant AER as Aerolínea (Frontend)
+
+    OP->>AUTH: POST /api/auth/login {user, pass}
+    AUTH-->>OP: JWT {rol: OPERARIO}
+
+    OP->>API: POST /api/envios {origen, destino, maletas, aerolineaId}
+    Note over API: Header: Authorization: Bearer JWT
+    AUTH->>AUTH: Verificar rol = OPERARIO o ADMIN
+    API->>DB: INSERT envio (estado=PENDIENTE, simulacion_id=NULL, operario_id=X)
+    API-->>OP: 201 Created {envioId}
+
+    Note over SCHED: Cada Ta segundos
+    SCHED->>DB: SELECT envios WHERE simulacion_id IS NULL AND estado=PENDIENTE ORDER BY fecha_hora_registro LIMIT Sc
+    SCHED->>ACS: planificar(subInput, Ta*1000)
+    ACS-->>SCHED: Resultado
+    SCHED->>DB: UPDATE envio SET estado=EN_RUTA/ENTREGADO
+    SCHED->>DB: INSERT asignacion_envio (tramos de ruta)
+    SCHED->>WS: SEND /topic/tiempo-real {métricas globales}
+    SCHED->>WS: SEND /topic/mis-envios/{aerolineaId} {envíos actualizados}
+    WS-->>AER: "Su envío ENV-001 está EN_RUTA: SPJC → KMIA → LEMD"
+```
+
+### Flujo de Simulación (Admin)
+
+```mermaid
+sequenceDiagram
+    participant AD as Admin (Frontend)
+    participant AUTH as Spring Security
+    participant SC as SimulationController
+    participant SS as SimulationService
+    participant DB as MySQL
+    participant ACS as ACSAdapter
+    participant WS as WebSocket
+
+    AD->>AUTH: POST /api/auth/login {user, pass}
+    AUTH-->>AD: JWT {rol: ADMIN}
+
+    AD->>SC: POST /api/simulacion/iniciar {Sa, K, Ta, fechaInicio, fechaFin}
+    AUTH->>AUTH: Verificar rol = ADMIN
+    SC->>SS: iniciarSimulacion(config)
+    SS->>DB: Verificar cobertura de datos en rango
+    alt No hay datos suficientes
+        SS->>DB: INSERT envios sintéticos para cubrir rango
+    end
+    SS->>DB: INSERT simulacion (estado=EJECUTANDO)
+    SS-->>AD: 200 OK {simulacionId}
+
+    loop Cada bloque (async)
+        SS->>DB: SELECT envios WHERE simulacion_id=X AND fecha BETWEEN cursor AND cursor+Sc
+        SS->>ACS: planificar(subInput, Ta*1000)
+        ACS-->>SS: PlanificationSolutionOutput
+        SS->>DB: INSERT bloque_resultado + asignacion_envio
+        SS->>DB: UPDATE simulacion SET cursor_temporal++, bloque_actual++
+        SS->>WS: SEND /topic/simulacion/{id} {progreso}
+        WS-->>AD: Actualización en tiempo real
+    end
+```
+
+---
+
+## Proposed Changes
+
+### Capa de Dominio (Entities)
+
+#### [NEW] UsuarioEntity.java
+- Campos: `id`, `username`, `passwordHash`, `nombreCompleto`, `rol` (enum), `aerolineaId` (nullable), `activo`, `createdAt`
+- `@Enumerated(EnumType.STRING)` para el rol
+
+#### [NEW] AerolineaEntity.java
+- Campos: `id`, `nombre`, `codigo`
+- Relación `@OneToMany` con `UsuarioEntity` y `EnvioEntity`
+
+#### [MODIFY] [EnvioEntity.java](file:///c:/Users/cesar/OneDrive/Escritorio/PUCP/9no/DP1/SUITChASE/SUITChASE/Backend/src/main/java/com/tasf/b2b/domain/EnvioEntity.java)
+- Añadir `aerolineaId` (FK, NOT NULL)
+- Añadir `operarioId` (FK, nullable — NULL si es sintético)
+- Añadir `estado` (enum: PENDIENTE, EN_RUTA, ENTREGADO, COLAPSO, SIN_RUTA)
+- Añadir `simulacionId` (FK, nullable — NULL = tiempo real)
+- Añadir índice en `(simulacion_id, fecha_hora_registro)` y en `(aerolinea_id, estado)`
+
+#### [NEW] SimulacionEntity.java
+- Todos los campos del diagrama ER
+- `cursor_temporal` para pausa/reanudación
+
+#### [NEW] BloqueResultadoEntity.java
+- Métricas por bloque
+
+#### [NEW] AsignacionEnvioEntity.java
+- Tramos de ruta (envío → vuelo con orden y fechas)
+
+---
+
+### Capa de Seguridad
+
+#### [MODIFY] [SecurityConfig.java](file:///c:/Users/cesar/OneDrive/Escritorio/PUCP/9no/DP1/SUITChASE/SUITChASE/Backend/src/main/java/com/tasf/b2b/config/SecurityConfig.java)
+- Reemplazar la configuración actual (todo `permitAll`) por reglas basadas en roles
+- Registrar `JwtAuthenticationFilter` en la cadena de filtros
+- Configurar `PasswordEncoder` (BCrypt)
+- Configurar `AuthenticationManager`
+
+#### [NEW] JwtService.java
+- Generar y validar tokens JWT
+- Extraer username, rol y aerolineaId del token
+
+#### [NEW] JwtAuthenticationFilter.java
+- Filtro que intercepta cada request, extrae el JWT del header, lo valida y establece el `SecurityContext`
+
+#### [NEW] AuthController.java
+- `POST /api/auth/login` — Autenticar y devolver JWT
+- `POST /api/auth/registro` — Solo ADMIN puede crear usuarios
+
+#### [NEW] CustomUserDetailsService.java
+- Implementa `UserDetailsService` para cargar usuarios desde MySQL
+
+---
+
+### Capa de Servicio
+
+#### [MODIFY] [SimulationService.java](file:///c:/Users/cesar/OneDrive/Escritorio/PUCP/9no/DP1/SUITChASE/SUITChASE/Backend/src/main/java/com/tasf/b2b/service/SimulationService.java)
+- Loop de bloques asíncrono (`@Async`)
+- Métodos: `iniciarSimulacion()`, `pausarSimulacion()`, `reanudarSimulacion()`
+- Query por ventana Sc → ACS → persistir → WebSocket
+- Los `capVuelos` y `capAlmacenes` se mantienen en memoria solo durante ejecución activa
+
+#### [NEW] RealTimeSchedulerService.java
+- `@Scheduled(fixedDelayString = "${planificador.ta-ms}")` — se ejecuta cada Ta
+- Consume envíos con `simulacion_id IS NULL AND estado = PENDIENTE`
+- Notifica por WebSocket a `/topic/tiempo-real` y `/topic/mis-envios/{aerolineaId}`
+
+#### [NEW] DatosSinteticosService.java
+- Genera envíos sintéticos para rangos de fechas sin cobertura
+- Los asocia a una `simulacion_id`
+
+#### [NEW] EnvioService.java
+- CRUD de envíos
+- Método `getMisEnvios(aerolineaId)` para el rol AEROLINEA
+- Método `registrarEnvio(dto, operarioId)` para el rol OPERARIO
+
+---
+
+### Capa API
+
+#### [MODIFY] [SimulationController.java](file:///c:/Users/cesar/OneDrive/Escritorio/PUCP/9no/DP1/SUITChASE/SUITChASE/Backend/src/main/java/com/tasf/b2b/api/SimulationController.java)
+- Endpoints de simulación (solo ADMIN)
+- Iniciar, pausar, reanudar, cancelar, consultar progreso y bloques
+
+#### [NEW] EnvioController.java
+- `POST /api/envios` — OPERARIO registra envío
+- `GET /api/envios/mis-envios` — AEROLINEA consulta sus envíos
+- `GET /api/envios/{id}/ruta` — Ruta asignada
+
+#### [NEW] AuthController.java
+- Login y registro de usuarios
+
+#### [NEW] WebSocketConfig.java
+- Configuración STOMP: prefijos `/ws`, `/topic`, `/app`
+
+---
+
+### Capa Core
+
+#### [MODIFY] [TimeUtils.java](file:///c:/Users/cesar/OneDrive/Escritorio/PUCP/9no/DP1/SUITChASE/SUITChASE/Backend/src/main/java/com/tasf/b2b/core/TimeUtils.java)
+- Hacer fechas configurables (no hardcodeadas)
+
+---
+
+## Dependencias Maven Nuevas
+
+```xml
+<!-- JWT -->
+<dependency>
+    <groupId>io.jsonwebtoken</groupId>
+    <artifactId>jjwt-api</artifactId>
+    <version>0.12.6</version>
+</dependency>
+<dependency>
+    <groupId>io.jsonwebtoken</groupId>
+    <artifactId>jjwt-impl</artifactId>
+    <version>0.12.6</version>
+    <scope>runtime</scope>
+</dependency>
+<dependency>
+    <groupId>io.jsonwebtoken</groupId>
+    <artifactId>jjwt-jackson</artifactId>
+    <version>0.12.6</version>
+    <scope>runtime</scope>
+</dependency>
+```
+
+---
+
+## SQL de Inicialización
+
+Script para crear la base de datos con un admin por defecto:
+
+```sql
+CREATE DATABASE IF NOT EXISTS suitchase
+  CHARACTER SET utf8mb4
+  COLLATE utf8mb4_unicode_ci;
+
+USE suitchase;
+
+-- Las tablas se crean automáticamente por Hibernate (ddl-auto=update)
+-- Solo insertamos datos iniciales:
+
+-- Admin por defecto (password: admin123, hasheado con BCrypt)
+INSERT INTO usuario (username, password_hash, nombre_completo, rol, activo, created_at)
+VALUES ('admin', '$2a$10$...hash...', 'Administrador', 'ADMIN', true, NOW());
+```
+
+---
+
+## Verification Plan
+
+### Automated Tests
+1. **Security**: Verificar que OPERARIO no puede acceder a `/api/simulacion/**`
+2. **Security**: Verificar que AEROLINEA solo ve sus propios envíos
+3. **SimulationService**: Verificar consumo por bloques sin cargar todo a RAM
+4. **RealTimeScheduler**: Verificar que consume envíos pendientes cada Ta
+
+### Manual Verification
+1. Login con cada rol y verificar acceso/restricción a endpoints
+2. Registrar envíos como operario → verificar que aparecen en la vista de la aerolínea
+3. Iniciar simulación → pausar → reanudar → verificar continuidad del cursor
+4. Monitorear RAM con `htop` durante simulación con muchos envíos

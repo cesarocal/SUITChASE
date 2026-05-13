@@ -7,9 +7,9 @@ import java.util.List;
  * Resultado de la planificaciÃ³n de ruta para un envÃ­o.
  */
 public class ResultadoRuta {
-    LocalDateTime           tiempoLlegadaFinal;
-    List<VueloAlgoritmo>    vuelosUsados;
-    List<LocalDateTime>     fechasVuelo;
+    public LocalDateTime           tiempoLlegadaFinal;
+    public List<VueloAlgoritmo>    vuelosUsados;
+    public List<LocalDateTime>     fechasVuelo;
 
     public ResultadoRuta(LocalDateTime tiempo,
                          List<VueloAlgoritmo> vuelos,
