@@ -1,0 +1,27 @@
+# ========================
+# Frontend (Node / Vite)
+# ========================
+Frontend/node_modules/
+Frontend/dist/
+Frontend/.vite/
+
+# ========================
+# Backend / Planificador (Java)
+# ========================
+**/*.class
+**/*.jar
+**/target/
+
+# ========================
+# Logs
+# ========================
+*.log
+*.txt.log
+log_*.txt
+reporte_*.txt
+
+# ========================
+# Sistema operativo
+# ========================
+.DS_Store
+Thumbs.db
