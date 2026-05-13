@@ -63,12 +63,12 @@ export function LoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-[12px] text-[#94a3b8] mb-1.5">Usuario</label>
+              <label className="block text-[12px] text-[#94a3b8] mb-1.5">Usuario o Correo</label>
               <input
                 type="text"
                 value={user}
                 onChange={e => { setUser(e.target.value); setError(""); }}
-                placeholder="admin / operario / aerolinea"
+                placeholder="Ingrese su usuario o correo electrónico"
                 className="w-full rounded-lg bg-[#1e293b] border border-[#334155] text-white text-[13px] px-3 py-2.5 placeholder:text-white/30 focus:outline-none focus:border-cyan-500/50 transition-colors"
               />
             </div>
@@ -79,7 +79,7 @@ export function LoginPage() {
                   type={showPass ? "text" : "password"}
                   value={pass}
                   onChange={e => { setPass(e.target.value); setError(""); }}
-                  placeholder="••••••"
+                  placeholder="Ingrese su contraseña"
                   className="w-full rounded-lg bg-[#1e293b] border border-[#334155] text-white text-[13px] px-3 py-2.5 pr-10 placeholder:text-white/30 focus:outline-none focus:border-cyan-500/50 transition-colors"
                 />
                 <button
@@ -100,16 +100,13 @@ export function LoginPage() {
 
             <button
               type="submit"
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[13px] transition-colors"
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[13px] transition-colors disabled:opacity-50"
             >
               <LogIn className="w-4 h-4" />
-              Iniciar sesión
+              {loading ? "Iniciando sesión..." : "Iniciar sesión"}
             </button>
           </form>
-
-          <div className="mt-6 text-[11px] text-white/30 text-center">
-            Usuarios de prueba: admin / operario / aerolinea (contraseña = usuario)
-          </div>
         </div>
       </div>
     </div>

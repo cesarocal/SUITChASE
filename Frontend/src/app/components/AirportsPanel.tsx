@@ -117,11 +117,11 @@ export function AirportsPanel() {
   // Validation
   const validate = (): boolean => {
     const e: Partial<Record<keyof FormData, string>> = {};
-    if (!form.code.trim()) e.code = "Código IATA es requerido";
-    else if (!/^[A-Z]{3,4}$/i.test(form.code.trim())) e.code = "Código IATA debe ser 3-4 letras";
+    if (!form.code.trim()) e.code = "Código OACI es requerido";
+    else if (!/^[A-Z]{3,4}$/i.test(form.code.trim())) e.code = "Código OACI debe ser 3-4 letras";
     else if (modalMode === "create") {
       const dup = airportsList.find(a => a.code === form.code.trim().toUpperCase());
-      if (dup) e.code = "Este código IATA ya está registrado";
+      if (dup) e.code = "Este código OACI ya está registrado";
     }
     if (!form.city.trim()) e.city = "Ciudad es requerida";
     if (!form.country.trim()) e.country = "País es requerido";
@@ -278,7 +278,7 @@ export function AirportsPanel() {
             <input
               value={search}
               onChange={e => { setSearch(e.target.value); setPage(0); }}
-              placeholder="Buscar por IATA, ciudad o país..."
+              placeholder="Buscar por OACI, ciudad o país..."
               className={`pl-8 pr-3 py-1.5 rounded-lg text-[12px] border w-full sm:w-64 ${
                 isDark
                   ? "bg-[#1e293b] border-[#334155] text-white placeholder:text-white/30"
@@ -301,7 +301,7 @@ export function AirportsPanel() {
           <table className="w-full text-[12px]">
             <thead>
               <tr className={thBg}>
-                <th className={`text-left px-3 py-2.5 ${textSecondary}`}>IATA</th>
+                <th className={`text-left px-3 py-2.5 ${textSecondary}`}>OACI</th>
                 <th className={`text-left px-3 py-2.5 ${textSecondary}`}>Ciudad</th>
                 <th className={`text-left px-3 py-2.5 ${textSecondary} hidden md:table-cell`}>País</th>
                 <th className={`text-left px-3 py-2.5 ${textSecondary} hidden lg:table-cell`}>Continente</th>
@@ -500,11 +500,11 @@ export function AirportsPanel() {
               {/* Code + City */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className={labelCls}>Código IATA *</label>
+                  <label className={labelCls}>Código OACI *</label>
                   <input
                     value={form.code}
                     onChange={e => setForm(f => ({ ...f, code: e.target.value.toUpperCase() }))}
-                    placeholder="BOG"
+                    placeholder="SKBO"
                     maxLength={4}
                     disabled={modalMode === "edit"}
                     className={`${inputCls} ${modalMode === "edit" ? "opacity-50 cursor-not-allowed" : ""}`}

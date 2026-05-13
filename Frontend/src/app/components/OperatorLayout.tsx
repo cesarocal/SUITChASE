@@ -1,7 +1,7 @@
 import React from "react";
-import { Outlet, NavLink, useLocation } from "react-router";
+import { Outlet, NavLink, useLocation, useNavigate } from "react-router";
 import { useTheme } from "../context/ThemeContext";
-import { Briefcase, Package, Sun, Moon } from "lucide-react";
+import { Briefcase, Package, Sun, Moon, LogOut } from "lucide-react";
 
 function useCurrentTime() {
   const [now, setNow] = React.useState(new Date());
@@ -18,6 +18,22 @@ function OperatorLayoutInner() {
   const dateStr = now.toLocaleDateString("es-ES", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
   const timeStr = now.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const role = localStorage.getItem("suitchase_role");
+  const isOperator = role === "OPERARIO";
+
+  React.useEffect(() => {
+    if (!isOperator) {
+      if (role === "ADMIN") {
+        navigate("/", { replace: true });
+      } else if (role === "AEROLINEA") {
+        navigate("/aerolinea", { replace: true });
+      } else {
+        navigate("/login", { replace: true });
+      }
+    }
+  }, [isOperator, role, navigate]);
 
   return (
     <div className={`flex h-screen overflow-hidden transition-colors duration-200 ${isDark ? "bg-[#0a0f1e] text-[#e2e8f0]" : "bg-[#f0f4f8] text-[#1e293b]"}`}>
@@ -63,9 +79,24 @@ function OperatorLayoutInner() {
 
       {/* Main */}
       <div className="flex-1 flex flex-col min-w-0">
-        <header className={`h-12 border-b flex items-center px-4 shrink-0 ${isDark ? "bg-[#0f172a] border-[#1e293b]" : "bg-[#e8edf5] border-[#cbd5e1]"}`}>
+        <header className={`h-12 border-b flex items-center px-4 gap-3 shrink-0 ${isDark ? "bg-[#0f172a] border-[#1e293b]" : "bg-[#e8edf5] border-[#cbd5e1]"}`}>
           <span className={`text-[14px] ${isDark ? "text-white" : "text-[#0f172a]"}`}>Registro de Equipaje</span>
-          <span className={`text-[12px] ml-auto ${isDark ? "text-[#94a3b8]" : "text-[#64748b]"}`}>{dateStr} • {timeStr}</span>
+          <div className="ml-auto flex items-center gap-3">
+            <span className={`text-[12px] ${isDark ? "text-[#94a3b8]" : "text-[#64748b]"}`}>{dateStr} • {timeStr}</span>
+            <button
+              onClick={() => navigate("/login")}
+              title="Cerrar sesión"
+              className={`
+                w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200
+                ${isDark
+                  ? "bg-[#1e293b] border border-[#334155] text-red-400 hover:bg-[#334155] hover:border-red-400/40"
+                  : "bg-[#dde6f0] border border-[#b8ccd8] text-red-500 hover:bg-[#c8d8e8] hover:border-red-400"
+                }
+              `}
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
         </header>
         <main className={`flex-1 overflow-auto p-4 ${isDark ? "" : "bg-[#f0f4f8]"}`}>
           <Outlet />

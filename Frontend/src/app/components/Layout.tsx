@@ -76,15 +76,21 @@ function LayoutInner() {
   const [pickerValue, setPickerValue] = useState("");
 
   // Role check — only admin can access admin layout
-  const role = localStorage.getItem("suitchase_role") || "admin";
-  const isAdmin = role === "admin";
+  const role = localStorage.getItem("suitchase_role");
+  const isAdmin = role === "ADMIN";
 
-  // Redirect non-admin away from simulation
+  // Guard: Redirect non-admins to their respective pages
   React.useEffect(() => {
-    if (!isAdmin && location.pathname === "/simulacion") {
-      navigate("/", { replace: true });
+    if (!isAdmin) {
+      if (role === "OPERARIO") {
+        navigate("/operario", { replace: true });
+      } else if (role === "AEROLINEA") {
+        navigate("/aerolinea", { replace: true });
+      } else {
+        navigate("/login", { replace: true });
+      }
     }
-  }, [isAdmin, location.pathname, navigate]);
+  }, [isAdmin, role, navigate]);
 
   // Real clock for dashboard page
   const [now, setNow] = useState(new Date());

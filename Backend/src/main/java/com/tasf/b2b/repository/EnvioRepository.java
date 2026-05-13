@@ -21,6 +21,9 @@ public interface EnvioRepository extends JpaRepository<EnvioEntity, String> {
     // Para la vista de aerolínea (sus propios envíos)
     List<EnvioEntity> findByAerolineaIdAndSimulacionIdIsNullOrderByFechaHoraRegistroDesc(Long aerolineaId);
 
+    // Para la vista global (admin/operario)
+    List<EnvioEntity> findBySimulacionIdIsNullOrderByFechaHoraRegistroDesc();
+
     // Para la vista de aerolínea filtrada por estado
     List<EnvioEntity> findByAerolineaIdAndEstadoAndSimulacionIdIsNullOrderByFechaHoraRegistroDesc(
             Long aerolineaId, EstadoEnvio estado);

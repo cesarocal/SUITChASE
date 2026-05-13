@@ -59,14 +59,21 @@ public class EnvioController {
     // ========================================
     @GetMapping("/mis-envios")
     public ResponseEntity<List<EnvioEntity>> misEnvios(Authentication auth) {
-        // El aerolineaId está almacenado en credentials del token
-        Long aerolineaId = (Long) auth.getCredentials();
-        if (aerolineaId == null) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        }
+        boolean isStaff = auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_OPERARIO"));
 
-        List<EnvioEntity> envios = envioRepository
-                .findByAerolineaIdAndSimulacionIdIsNullOrderByFechaHoraRegistroDesc(aerolineaId);
+        List<EnvioEntity> envios;
+        if (isStaff) {
+            // Admin and Operator see all real-time shipments
+            envios = envioRepository.findBySimulacionIdIsNullOrderByFechaHoraRegistroDesc();
+        } else {
+            // Airline only sees their own
+            Long aerolineaId = (Long) auth.getCredentials();
+            if (aerolineaId == null) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
+            envios = envioRepository.findByAerolineaIdAndSimulacionIdIsNullOrderByFechaHoraRegistroDesc(aerolineaId);
+        }
 
         return ResponseEntity.ok(envios);
     }

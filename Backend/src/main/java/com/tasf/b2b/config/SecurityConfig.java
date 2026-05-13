@@ -47,10 +47,9 @@ public class SecurityConfig {
                 .requestMatchers("/api/datos-sinteticos/**").hasRole("ADMIN")
 
                 // --- OPERARIO puede registrar envíos ---
+                // --- Envios ---
                 .requestMatchers(HttpMethod.POST, "/api/envios").hasAnyRole("ADMIN", "OPERARIO")
-
-                // --- AEROLINEA puede ver sus envíos ---
-                .requestMatchers("/api/envios/mis-envios").hasRole("AEROLINEA")
+                .requestMatchers("/api/envios/mis-envios").hasAnyRole("ADMIN", "OPERARIO", "AEROLINEA")
 
                 // --- Consultas generales (cualquier autenticado) ---
                 .requestMatchers(HttpMethod.GET, "/api/aeropuertos/**").authenticated()

@@ -43,13 +43,18 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
 
 export const api = {
   login: async (username, password) => {
-    const res = await request<{ token: string; role: string; aerolineaId?: number }>("/auth/login", {
+    const res = await request<any>("/auth/login", {
       method: "POST",
       auth: false,
       body: { username, password },
     });
+    
+    // Support both 'role' and 'rol' in case backend hasn't been restarted
+    const userRole = res.role || res.rol;
+    res.role = userRole; // Normalize to 'role' for the rest of the frontend
+    
     localStorage.setItem("suitchase_token", res.token);
-    localStorage.setItem("suitchase_role", res.role);
+    localStorage.setItem("suitchase_role", userRole);
     if (res.aerolineaId) localStorage.setItem("suitchase_aerolinea_id", res.aerolineaId.toString());
     return res;
   },
@@ -61,9 +66,9 @@ export const api = {
   
   getFlights: () => request<any[]>("/vuelos"),
   
-  getEnvios: () => request<any[]>("/envio/mis-envios"),
-  registrarEnvio: (data) => request("/envio", { method: "POST", body: data }),
-  getRutaEnvio: (id) => request(`/envio/${id}/ruta`),
+  getEnvios: () => request<any[]>("/envios/mis-envios"),
+  registrarEnvio: (data) => request("/envios", { method: "POST", body: data }),
+  getRutaEnvio: (id) => request(`/envios/${id}/ruta`),
 
   getSimulaciones: () => request<any[]>("/simulacion"),
   iniciarSimulacion: (data) => request("/simulacion/iniciar", { method: "POST", body: data }),
