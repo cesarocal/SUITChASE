@@ -46,7 +46,7 @@ export const api = {
     const res = await request<any>("/auth/login", {
       method: "POST",
       auth: false,
-      body: { username, password },
+      body: { correo: username, password },
     });
     
     // Support both 'role' and 'rol' in case backend hasn't been restarted

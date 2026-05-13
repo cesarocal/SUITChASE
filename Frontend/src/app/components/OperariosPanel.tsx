@@ -115,7 +115,7 @@ export function OperariosPanel() {
   const handleSave = async () => {
     if (!validate()) return;
     const payload = {
-      username: form.correo.split("@")[0], // generated username
+      username: null,
       nombreCompleto: form.nombre.trim(),
       dni: form.dni.trim(),
       correo: form.correo.trim(),

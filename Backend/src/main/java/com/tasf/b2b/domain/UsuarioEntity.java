@@ -19,8 +19,7 @@ public class UsuarioEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 50)
-    private String username;
+
 
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
@@ -31,7 +30,7 @@ public class UsuarioEntity {
     @Column(length = 20)
     private String dni;
 
-    @Column(length = 100)
+    @Column(nullable = false, unique = true, length = 100)
     private String correo;
 
     @Column(length = 25)

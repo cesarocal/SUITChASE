@@ -19,16 +19,18 @@ public class CustomUserDetailsService implements UserDetailsService {
     private final UsuarioRepository usuarioRepository;
 
     @Override
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        UsuarioEntity usuario = usuarioRepository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado: " + username));
+    public UserDetails loadUserByUsername(String identifier) throws UsernameNotFoundException {
+        UsuarioEntity usuario = usuarioRepository.findByCorreo(identifier)
+                .orElseThrow(() -> new UsernameNotFoundException("Usuario o correo no encontrado: " + identifier));
 
         if (!usuario.getActivo()) {
-            throw new UsernameNotFoundException("Usuario desactivado: " + username);
+            throw new UsernameNotFoundException("Usuario desactivado: " + identifier);
         }
 
+        String principalName = usuario.getCorreo();
+
         return new User(
-                usuario.getUsername(),
+                principalName,
                 usuario.getPasswordHash(),
                 List.of(new SimpleGrantedAuthority("ROLE_" + usuario.getRol().name()))
         );

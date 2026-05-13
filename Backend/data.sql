@@ -2911,7 +2911,7 @@ INSERT INTO vuelo (origen_oaci, destino_oaci, hora_salida, hora_llegada, capacid
 ('OJAI', 'UBBB', '19:48:00', '20:55:00', 0360);
 
 -- Usuarios (Password: password)
-INSERT INTO usuario (username, password_hash, nombre_completo, rol, aerolinea_id, activo, created_at) VALUES
-('admin', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Admin Sistema', 'ADMIN', NULL, 1, NOW()),
-('operario1', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Juan Perez', 'OPERARIO', NULL, 1, NOW()),
-('lan_user', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Gestor LATAM', 'AEROLINEA', 1, 1, NOW());
+INSERT INTO usuario (correo, password_hash, nombre_completo, rol, aerolinea_id, activo, created_at) VALUES
+('admin@suitchase.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Admin Sistema', 'ADMIN', NULL, 1, NOW()),
+('operario1@suitchase.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Juan Perez', 'OPERARIO', NULL, 1, NOW()),
+('lan@suitchase.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Gestor LATAM', 'AEROLINEA', 1, 1, NOW());

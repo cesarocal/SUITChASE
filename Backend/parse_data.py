@@ -97,9 +97,9 @@ with open('data.sql', 'w', encoding='utf-8') as out:
         out.write(",\n".join(vuelos) + ";\n\n")
 
     out.write("-- Usuarios (Password: password)\n")
-    out.write("INSERT INTO usuario (username, password_hash, nombre_completo, rol, aerolinea_id, activo, created_at) VALUES\n")
-    out.write("('admin', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Admin Sistema', 'ADMIN', NULL, 1, NOW()),\n")
-    out.write("('operario1', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Juan Perez', 'OPERARIO', NULL, 1, NOW()),\n")
-    out.write("('lan_user', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Gestor LATAM', 'AEROLINEA', 1, 1, NOW());\n")
+    out.write("INSERT INTO usuario (username, correo, password_hash, nombre_completo, rol, aerolinea_id, activo, created_at) VALUES\n")
+    out.write("('admin', 'admin@suitchase.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Admin Sistema', 'ADMIN', NULL, 1, NOW()),\n")
+    out.write("(NULL, 'operario1@suitchase.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Juan Perez', 'OPERARIO', NULL, 1, NOW()),\n")
+    out.write("('lan_user', 'lan@suitchase.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Gestor LATAM', 'AEROLINEA', 1, 1, NOW());\n")
 
 print(f"Generated data.sql with {len(aeropuertos)} aeropuertos and {len(vuelos)} vuelos.")

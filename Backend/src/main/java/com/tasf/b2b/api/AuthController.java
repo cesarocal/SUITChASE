@@ -30,22 +30,24 @@ public class AuthController {
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
         try {
             authManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(request.username(), request.password())
+                    new UsernamePasswordAuthenticationToken(request.correo(), request.password())
             );
 
-            UsuarioEntity usuario = usuarioRepository.findByUsername(request.username())
+            UsuarioEntity usuario = usuarioRepository.findByCorreo(request.correo())
                     .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
+            String principalName = usuario.getCorreo();
+
             String token = jwtService.generateToken(
-                    usuario.getUsername(),
+                    principalName,
                     usuario.getRol().name(),
                     usuario.getAerolineaId()
             );
 
             return ResponseEntity.ok(Map.of(
                     "token", token,
-                    "username", usuario.getUsername(),
-                    "rol", usuario.getRol().name(),
+                    "correo", principalName,
+                    "role", usuario.getRol().name(),
                     "nombreCompleto", usuario.getNombreCompleto()
             ));
         } catch (Exception e) {
@@ -59,13 +61,13 @@ public class AuthController {
     // ========================================
     @PostMapping("/registro")
     public ResponseEntity<?> registrar(@RequestBody RegistroRequest request) {
-        if (usuarioRepository.existsByUsername(request.username())) {
+        if (usuarioRepository.existsByCorreo(request.correo())) {
             return ResponseEntity.badRequest()
-                    .body(Map.of("error", "El username ya existe"));
+                    .body(Map.of("error", "El correo ya está registrado"));
         }
 
         UsuarioEntity usuario = new UsuarioEntity();
-        usuario.setUsername(request.username());
+        usuario.setCorreo(request.correo());
         usuario.setPasswordHash(passwordEncoder.encode(request.password()));
         usuario.setNombreCompleto(request.nombreCompleto());
         usuario.setRol(UsuarioEntity.Rol.valueOf(request.rol()));
@@ -76,11 +78,11 @@ public class AuthController {
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(Map.of("mensaje", "Usuario creado exitosamente",
-                             "username", usuario.getUsername()));
+                             "correo", usuario.getCorreo()));
     }
 
     // --- DTOs como records ---
-    public record LoginRequest(String username, String password) {}
-    public record RegistroRequest(String username, String password, String nombreCompleto,
+    public record LoginRequest(String correo, String password) {}
+    public record RegistroRequest(String correo, String password, String nombreCompleto,
                                   String rol, Long aerolineaId) {}
 }
