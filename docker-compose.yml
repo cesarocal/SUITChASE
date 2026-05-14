@@ -1,11 +1,6 @@
 # =====================================================
-# Docker Compose — SUITChASE (Backend + Frontend)
+# Docker Compose — SUITChASE (Backend + Frontend + MySQL)
 # =====================================================
-# El servidor de MySQL y Nginx ya están instalados
-# nativamente en Ubuntu 24.04, así que solo se
-# conteneriza el Backend (Spring Boot) y el Frontend
-# (React/Vite servido con Nginx interno).
-#
 # USO:
 #   docker compose up -d --build
 #   docker compose down
@@ -13,6 +8,29 @@
 # =====================================================
 
 services:
+  # ============================================
+  # Base de Datos — MySQL 8
+  # ============================================
+  db:
+    image: mysql:8
+    container_name: suitchase-mysql
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root123}
+      MYSQL_DATABASE: suitchase
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./Backend/src/main/resources/schema.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - suitchase-net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   # ============================================
   # Backend — Spring Boot (JDK 21)
   # ============================================
@@ -25,14 +43,14 @@ services:
     ports:
       - "8090:8090"
     environment:
-      # Sobreescribir las propiedades de Spring Boot
-      SPRING_DATASOURCE_URL: jdbc:mysql://host.docker.internal:3306/suitchase?useSSL=false&serverTimezone=UTC
+      # Conectar al contenedor de la base de datos
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/suitchase?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:-root}
-      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-root123}
       JAVA_OPTS: "-XX:+UseG1GC -XX:MaxGCPauseMillis=200"
-    extra_hosts:
-      # Permite que el contenedor acceda al MySQL nativo del host
-      - "host.docker.internal:host-gateway"
+    depends_on:
+      db:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:8090/actuator/health"]
       interval: 30s
@@ -65,3 +83,6 @@ services:
 networks:
   suitchase-net:
     driver: bridge
+
+volumes:
+  mysql-data:
