@@ -1,4 +1,4 @@
-export const SIM_BASE_DATE = new Date(2026, 3, 2, 0, 0, 0);
+export const SIM_BASE_DATE = new Date(2026, 0, 2, 0, 0, 0);
 
 export interface BaggageGroup {
   id: string;
@@ -36,6 +36,7 @@ export interface SimulationState {
   collapseReason: string;
   running: boolean;
   speed: number;
+  hasStarted?: boolean;
   scenario: "daily" | "weekly" | "collapse";
   turnaroundHours: number;
   fastForwardTarget?: number | null;

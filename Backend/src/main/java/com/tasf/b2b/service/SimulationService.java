@@ -29,6 +29,7 @@ public class SimulationService {
     private final AsignacionEnvioRepository asignacionEnvioRepository;
     private final DataMapperService dataMapper;
     private final SimpMessagingTemplate messagingTemplate;
+    private final EnvioSinteticoFileReader envioFileReader;
 
     // Estado de simulaciones activas: simulacionId -> flag de pausa
     private final Map<Long, Boolean> pauseFlags = new ConcurrentHashMap<>();
@@ -111,6 +112,22 @@ public class SimulationService {
     }
 
     // ========================================================
+    // ACTUALIZAR K EN CALIENTE
+    // ========================================================
+    public void actualizarK(Long simulacionId, int nuevoK) {
+        SimulacionEntity sim = simulacionRepository.findById(simulacionId)
+                .orElseThrow(() -> new RuntimeException("Simulación no encontrada"));
+        sim.setConstanteK(nuevoK);
+        // Recalcular total de bloques estimados con el nuevo K
+        long totalMinutos = ChronoUnit.MINUTES.between(sim.getCursorTemporal(), sim.getFechaFinSim());
+        int bloquesRestantes = (int) Math.ceil((double) totalMinutos / sim.getSaltoAlgoritmoSa());
+        sim.setTotalBloquesEstimados(sim.getBloqueActual() + bloquesRestantes);
+        simulacionRepository.save(sim);
+        log.info("Simulación {} — K actualizado a {}. Nuevo Sc = {} min",
+                simulacionId, nuevoK, nuevoK * sim.getSaltoAlgoritmoSa());
+    }
+
+    // ========================================================
     // LOOP ASÍNCRONO DE BLOQUES — el corazón del sistema
     // ========================================================
     @Async
@@ -119,8 +136,6 @@ public class SimulationService {
                 .orElseThrow(() -> new RuntimeException("Simulación no encontrada"));
 
         int sa = sim.getSaltoAlgoritmoSa();
-        int k  = sim.getConstanteK();
-        int sc = k * sa;
         int ta = sim.getTiempoAlgoritmoTa();
 
         // Configurar TimeUtils para esta simulación
@@ -160,18 +175,19 @@ public class SimulationService {
                 return; // Sale del hilo async, el estado ya está en PAUSADA/CANCELADA
             }
 
+            // --- Recargar K desde DB (por si cambió en caliente) ---
+            SimulacionEntity simActual = simulacionRepository.findById(simulacionId).orElse(null);
+            if (simActual == null) return;
+            int k = simActual.getConstanteK();
+            int sc = k * sa;
+
             LocalDateTime finVentana = cursor.plusMinutes(sc);
             if (finVentana.isAfter(sim.getFechaFinSim())) {
                 finVentana = sim.getFechaFinSim();
             }
 
-            // 1. QUERY A DB — solo envíos de este bloque (RAM-safe)
-            List<EnvioAlgoritmo> enviosBloque = envioRepository
-                    .findBySimulacionIdAndFechaHoraRegistroBetweenOrderByFechaHoraRegistroAsc(
-                            simulacionId, cursor, finVentana)
-                    .stream()
-                    .map(dataMapper::toEnvioAlgoritmo)
-                    .collect(Collectors.toList());
+            // 1. LEER ENVÍOS DESDE ARCHIVOS .TXT (no desde DB)
+            List<EnvioAlgoritmo> enviosBloque = envioFileReader.leerEnviosPorRango(cursor, finVentana);
 
             bloqueActual++;
             long t0 = System.currentTimeMillis();
@@ -182,6 +198,9 @@ public class SimulationService {
             bloqueRes.setInicioVentana(cursor);
             bloqueRes.setFinVentana(finVentana);
             bloqueRes.setTotalEnvios(enviosBloque.size());
+
+            // Datos para el mensaje WebSocket enriquecido
+            List<Map<String, Object>> rutasResumen = new ArrayList<>();
 
             if (!enviosBloque.isEmpty()) {
                 // 2. Crear sub-input con los envíos del bloque
@@ -206,44 +225,59 @@ public class SimulationService {
                 // 5. Persistir rutas asignadas
                 persistirAsignaciones(solucion, bloqueRes.getId());
 
-                // 6. Actualizar estado de envíos en DB
-                actualizarEstadoEnvios(solucion);
+                // 6. Construir resumen de rutas para WebSocket
+                rutasResumen = construirResumenRutas(solucion, enviosBloque);
 
-                log.info("Bloque {}/{} | Envíos: {} | SLA: {:.2f}% | {}ms",
-                        bloqueActual, sim.getTotalBloquesEstimados(),
-                        enviosBloque.size(), solucion.getPromedioConsumoSLA(), duracion);
+                log.info("Bloque {}/{} | K={} Sc={}min | Envíos: {} | ConRuta: {} | SLA: {}% | {}ms",
+                        bloqueActual, simActual.getTotalBloquesEstimados(),
+                        k, sc, enviosBloque.size(), solucion.enviosConRuta(),
+                        String.format("%.2f", solucion.getPromedioConsumoSLA()), duracion);
             } else {
                 bloqueRes.setDuracionMs(System.currentTimeMillis() - t0);
                 bloqueResultadoRepository.save(bloqueRes);
-                log.info("Bloque {}/{} — sin envíos", bloqueActual, sim.getTotalBloquesEstimados());
+                log.info("Bloque {}/{} — sin envíos (K={}, Sc={}min)",
+                        bloqueActual, simActual.getTotalBloquesEstimados(), k, sc);
             }
 
             // 7. Avanzar cursor
             cursor = cursor.plusMinutes(sa);
 
             // 8. Actualizar estado en DB
-            sim.setCursorTemporal(cursor);
-            sim.setBloqueActual(bloqueActual);
-            simulacionRepository.save(sim);
+            simActual.setCursorTemporal(cursor);
+            simActual.setBloqueActual(bloqueActual);
+            simulacionRepository.save(simActual);
 
-            // 9. Notificar frontend por WebSocket
-            messagingTemplate.convertAndSend("/topic/simulacion/" + simulacionId, Map.of(
-                    "simulacionId", simulacionId,
-                    "bloqueActual", bloqueActual,
-                    "totalBloques", sim.getTotalBloquesEstimados(),
-                    "cursor", cursor.toString(),
-                    "estado", sim.getEstado().name(),
-                    "sla", bloqueRes.getPromedioSla(),
-                    "ocupacionVuelos", bloqueRes.getOcupacionVuelos(),
-                    "ocupacionAlmacenes", bloqueRes.getOcupacionAlmacenes(),
-                    "envios", bloqueRes.getTotalEnvios(),
-                    "duracionMs", bloqueRes.getDuracionMs()
-            ));
+            // 9. Notificar frontend por WebSocket — MENSAJE ENRIQUECIDO
+            Map<String, Object> wsMessage = new LinkedHashMap<>();
+            wsMessage.put("simulacionId", simulacionId);
+            wsMessage.put("bloqueActual", bloqueActual);
+            wsMessage.put("totalBloques", simActual.getTotalBloquesEstimados());
+            wsMessage.put("cursor", cursor.toString());
+            wsMessage.put("estado", simActual.getEstado().name());
+            wsMessage.put("k", k);
+
+            // Métricas del bloque
+            Map<String, Object> metricas = new LinkedHashMap<>();
+            metricas.put("totalEnvios", bloqueRes.getTotalEnvios());
+            metricas.put("enviosConRuta", bloqueRes.getEnviosConRuta());
+            metricas.put("enviosSinRuta", bloqueRes.getEnviosSinRuta());
+            metricas.put("sla", bloqueRes.getPromedioSla());
+            metricas.put("ocupacionVuelos", bloqueRes.getOcupacionVuelos());
+            metricas.put("ocupacionAlmacenes", bloqueRes.getOcupacionAlmacenes());
+            metricas.put("duracionMs", bloqueRes.getDuracionMs());
+            wsMessage.put("metricas", metricas);
+
+            // Resumen de rutas (limitado para controlar volumen)
+            wsMessage.put("rutasResumen", rutasResumen);
+            wsMessage.put("bloqueId", bloqueRes.getId());
+
+            messagingTemplate.convertAndSend("/topic/simulacion/" + simulacionId, wsMessage);
         }
 
         // ═══════════════════════════════════════════════════
         // SIMULACIÓN FINALIZADA
         // ═══════════════════════════════════════════════════
+        sim = simulacionRepository.findById(simulacionId).orElse(sim);
         sim.setEstado(EstadoSimulacion.FINALIZADA);
         sim.setBloqueActual(bloqueActual);
         simulacionRepository.save(sim);
@@ -257,6 +291,44 @@ public class SimulationService {
         ));
 
         log.info("Simulación {} FINALIZADA. Total bloques: {}", simulacionId, bloqueActual);
+    }
+
+    // ========================================================
+    // Construir resumen de rutas para WebSocket (limitado)
+    // ========================================================
+    private List<Map<String, Object>> construirResumenRutas(
+            PlanificationSolutionOutput solucion, List<EnvioAlgoritmo> enviosBloque) {
+
+        List<Map<String, Object>> resumen = new ArrayList<>();
+
+        for (EnvioAlgoritmo envio : enviosBloque) {
+            ResultadoRuta ruta = solucion.getRuta(envio);
+            Map<String, Object> envioResumen = new LinkedHashMap<>();
+            envioResumen.put("envioId", envio.getId());
+            envioResumen.put("origen", envio.getOrigenOaci());
+            envioResumen.put("destino", envio.getDestinoOaci());
+            envioResumen.put("maletas", envio.getCantidadMaletas());
+
+            if (ruta != null && ruta.vuelosUsados != null && !ruta.vuelosUsados.isEmpty()) {
+                envioResumen.put("estado", "CON_RUTA");
+                envioResumen.put("numTramos", ruta.vuelosUsados.size());
+                // Solo incluir el primer y último tramo como resumen
+                VueloAlgoritmo primerVuelo = ruta.vuelosUsados.get(0);
+                VueloAlgoritmo ultimoVuelo = ruta.vuelosUsados.get(ruta.vuelosUsados.size() - 1);
+                envioResumen.put("primerTramo", primerVuelo.getOrigenOaci() + "→" + primerVuelo.getDestinoOaci());
+                envioResumen.put("ultimoTramo", ultimoVuelo.getOrigenOaci() + "→" + ultimoVuelo.getDestinoOaci());
+                if (!ruta.fechasVuelo.isEmpty()) {
+                    envioResumen.put("salidaPrimer", ruta.fechasVuelo.get(0).toString());
+                    envioResumen.put("llegadaFinal", ruta.tiempoLlegadaFinal.toString());
+                }
+            } else {
+                envioResumen.put("estado", "SIN_RUTA");
+            }
+
+            resumen.add(envioResumen);
+        }
+
+        return resumen;
     }
 
     // ========================================================
@@ -297,35 +369,6 @@ public class SimulationService {
     }
 
     // ========================================================
-    // Actualizar estado de envíos en la tabla envio
-    // ========================================================
-    private void actualizarEstadoEnvios(PlanificationSolutionOutput solucion) {
-        List<EnvioEntity> updates = new ArrayList<>();
-
-        for (EnvioAlgoritmo envioAlg : solucion.getEnviosPlanificados()) {
-            ResultadoRuta ruta = solucion.getRuta(envioAlg);
-            EnvioEntity entity = envioRepository.findById(envioAlg.getId()).orElse(null);
-            if (entity == null) continue;
-
-            if (ruta == null || ruta.vuelosUsados.isEmpty()) {
-                entity.setEstado(EnvioEntity.EstadoEnvio.SIN_RUTA);
-            } else {
-                String destinoAlcanzado = ruta.vuelosUsados.get(ruta.vuelosUsados.size() - 1).getDestinoOaci();
-                if (destinoAlcanzado.equals(envioAlg.getDestinoOaci())) {
-                    entity.setEstado(EnvioEntity.EstadoEnvio.ENTREGADO);
-                } else {
-                    entity.setEstado(EnvioEntity.EstadoEnvio.EN_RUTA);
-                }
-            }
-            updates.add(entity);
-        }
-
-        if (!updates.isEmpty()) {
-            envioRepository.saveAll(updates);
-        }
-    }
-
-    // ========================================================
     // Helper: buscar vuelo ID en DB
     // ========================================================
     private Long buscarVueloId(VueloAlgoritmo vuelo) {
@@ -336,7 +379,7 @@ public class SimulationService {
     }
 
     // ========================================================
-    // CONSULTA: obtener estado de simulación
+    // CONSULTAS
     // ========================================================
     public SimulacionEntity obtenerSimulacion(Long id) {
         return simulacionRepository.findById(id)
@@ -349,6 +392,14 @@ public class SimulationService {
 
     public List<SimulacionEntity> listarSimulaciones() {
         return simulacionRepository.findAllByOrderByCreatedAtDesc();
+    }
+
+    /**
+     * Obtiene las rutas detalladas de un bloque específico.
+     * Usado por el endpoint GET /api/simulacion/{id}/bloques/{n}/rutas
+     */
+    public List<AsignacionEnvioEntity> obtenerRutasDeBloque(Long bloqueId) {
+        return asignacionEnvioRepository.findByBloqueResultadoIdOrderByEnvioIdAscOrdenVueloAsc(bloqueId);
     }
 
     // ========================================================

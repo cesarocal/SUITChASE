@@ -1,6 +1,7 @@
 package com.tasf.b2b.api;
 
 import com.tasf.b2b.core.PlanificationSolutionOutput;
+import com.tasf.b2b.domain.AsignacionEnvioEntity;
 import com.tasf.b2b.domain.BloqueResultadoEntity;
 import com.tasf.b2b.domain.SimulacionEntity;
 import com.tasf.b2b.service.SimulationService;
@@ -72,6 +73,21 @@ public class SimulationController {
     }
 
     // ========================================
+    // ACTUALIZAR K EN CALIENTE
+    // ========================================
+    @PutMapping("/{id}/k")
+    public ResponseEntity<?> actualizarK(@PathVariable Long id,
+                                          @RequestBody Map<String, Integer> body) {
+        int nuevoK = body.getOrDefault("k", 4);
+        simulationService.actualizarK(id, nuevoK);
+        return ResponseEntity.ok(Map.of(
+                "mensaje", "K actualizado",
+                "simulacionId", id,
+                "nuevoK", nuevoK
+        ));
+    }
+
+    // ========================================
     // CONSULTAR ESTADO
     // ========================================
     @GetMapping("/{id}")
@@ -93,6 +109,16 @@ public class SimulationController {
     @GetMapping("/{id}/bloques")
     public ResponseEntity<List<BloqueResultadoEntity>> bloques(@PathVariable Long id) {
         return ResponseEntity.ok(simulationService.obtenerBloques(id));
+    }
+
+    // ========================================
+    // RUTAS DETALLADAS DE UN BLOQUE — bajo demanda
+    // ========================================
+    @GetMapping("/{simId}/bloques/{bloqueId}/rutas")
+    public ResponseEntity<List<AsignacionEnvioEntity>> rutasDeBloque(
+            @PathVariable Long simId,
+            @PathVariable Long bloqueId) {
+        return ResponseEntity.ok(simulationService.obtenerRutasDeBloque(bloqueId));
     }
 
     // ========================================

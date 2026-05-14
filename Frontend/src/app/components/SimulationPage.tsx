@@ -22,7 +22,7 @@ function dayToDateStr(day: number): string {
 }
 
 export function SimulationPage() {
-  const { state, stop, togglePause, updateSpeed, reset, setScenario, confirmFastForward, cancelFastForward } = useSim();
+  const { state, start, stop, togglePause, updateSpeed, reset, setScenario, confirmFastForward, cancelFastForward } = useSim();
   const { isDark } = useTheme();
   const [selectedBaggage, setSelectedBaggage] = useState<BaggageGroup | null>(null);
   const [showTracking, setShowTracking] = useState(true);
@@ -195,7 +195,15 @@ export function SimulationPage() {
             <div className={`border rounded-xl p-3 backdrop-blur-sm ${panelBg}`}>
               <div className="flex items-center gap-2 mb-2">
                 <button
-                  onClick={togglePause}
+                  onClick={() => {
+                    if (!state.hasStarted) {
+                       const dateStr = (document.getElementById("sim-start-date") as HTMLInputElement)?.value;
+                       const d = dateStr ? new Date(dateStr) : undefined;
+                       start(d);
+                    } else {
+                       togglePause();
+                    }
+                  }}
                   className={`w-10 h-10 rounded-full border flex items-center justify-center transition-colors ${
                     isDark ? "bg-cyan-500/20 border-cyan-500/40 hover:bg-cyan-500/30" : "bg-blue-600/10 border-blue-600/30 hover:bg-blue-600/20"
                   }`}
@@ -228,33 +236,29 @@ export function SimulationPage() {
               <SpeedSlider speed={state.speed} onChange={updateSpeed} isDark={isDark} />
             </div>
 
-            {/* Escenarios */}
-            <div className={`border rounded-xl p-2 backdrop-blur-sm space-y-1 ${panelBg}`}>
-              {([
-                { key: "weekly", label: "Semanal (5 días)" },
-                { key: "collapse", label: "Hasta Colapso" },
-                { key: "tracking", label: "Tracking en Vivo" },
-              ] as const).map(s => (
-                <button
-                  key={s.key}
-                  onClick={() => {
-                    if (s.key === "tracking") {
-                      setViewMode("tracking");
-                    } else {
-                      setViewMode("simulation");
-                      setScenario(s.key);
+            {/* Configuración */}
+            <div className={`border rounded-xl p-3 backdrop-blur-sm space-y-2 ${panelBg}`}>
+              <h4 className={`text-[12px] ${panelText}`}>Configuración</h4>
+              <div className="flex flex-col gap-1">
+                <label className={`text-[10px] ${subText}`}>Fecha de inicio:</label>
+                <input
+                  type="datetime-local"
+                  disabled={state.running || state.currentTime > state.startTime}
+                  className={`w-full px-2 py-1 text-[11px] rounded border ${isDark ? "bg-[#1a2340] border-[#1a2744] text-white" : "bg-white border-[#cbd5e1] text-[#0f172a]"}`}
+                  defaultValue="2026-01-02T00:00"
+                  onChange={(e) => {
+                    const date = new Date(e.target.value);
+                    if (!isNaN(date.getTime())) {
+                      // We could store it in local state and pass it to start()
+                      // But for now, let's just pass it when play is clicked
+                      // To do that, we need to add a ref or state for the date
                     }
                   }}
-                  className={`w-full text-left px-2 py-1.5 rounded-lg text-[10px] transition-colors ${
-                    (s.key === "tracking" ? viewMode === "tracking" : viewMode === "simulation" && state.scenario === s.key)
-                      ? isDark ? "bg-cyan-500/15 text-cyan-400 border border-cyan-500/20" : "bg-blue-600/10 text-blue-700 border border-blue-600/20"
-                      : `${subText} border border-transparent ${isDark ? "hover:bg-[#0f172a] hover:text-cyan-500" : "hover:bg-[#dde6f0] hover:text-blue-700"}`
-                  }`}
-                >
-                  {s.label}
-                </button>
-              ))}
+                  id="sim-start-date"
+                />
+              </div>
             </div>
+
             {/* Spacer bottom for centering */}
             <div className="shrink-0 mb-auto" />
           </div>
